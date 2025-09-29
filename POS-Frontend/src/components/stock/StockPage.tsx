@@ -5,8 +5,14 @@ import { Link, useNavigate } from "react-router-dom"; // เพิ่ม useNavi
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { jwtDecode } from "jwt-decode";
 import { getWarehouses } from "../../api/product/warehousesApi.ts";
-import {getCategories} from "../../api/product/categoryApi.ts";
-import { faUserTie, faSearch, faEnvelope, faBriefcase, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { getCategories } from "../../api/product/categoryApi.ts";
+import {
+  faUserTie,
+  faSearch,
+  faEnvelope,
+  faBriefcase,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../styles/stock/StockPage.css";
 interface StockItem {
   barcode: string;
@@ -27,7 +33,12 @@ const StockPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [user, setUser] = useState<{ userId: string; username: string; role: string; email: string } | null>(null);
+  const [user, setUser] = useState<{
+    userId: string;
+    username: string;
+    role: string;
+    email: string;
+  } | null>(null);
   const [Warehouses, setGetWarehouses] = useState<any | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -42,9 +53,7 @@ const StockPage: React.FC = () => {
           role: decoded.role, // ✅ ตรงนี้แก้ให้ถูกต้อง
           username: decoded.username,
           email: decoded.email,
-          
         });
-
       } catch (error) {
         console.error("Invalid token:", error);
       }
@@ -52,7 +61,6 @@ const StockPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
- 
     const fetchData = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -64,11 +72,12 @@ const StockPage: React.FC = () => {
       try {
         const stock = await getStockData(token);
         setStockData(stock);
-        console.log('stock data:',stock);
+        console.log("stock data:", stock);
         const productData = await getProducts();
+
         if (productData.success && Array.isArray(productData.data)) {
           setProducts(productData.data);
-          console.log(productData.data);
+          // console.log(productData.data);
         } else {
           setError("ไม่พบข้อมูลสินค้า");
         }
@@ -80,27 +89,27 @@ const StockPage: React.FC = () => {
     fetchData();
   }, []);
 
-    useEffect(() => {
-      const fetchWarehouses = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("❌ No token found for warehouse");
-          return;
-        }
-  
-        try {
-          const warehouseList = await getWarehouses();
-          console.log("📦 Warehouse Data:", warehouseList);
-          setGetWarehouses(warehouseList); // สมมุติว่าข้อมูลเป็น array
-        } catch (error) {
-          setError("❌ ไม่สามารถโหลดข้อมูลคลังสินค้าได้");
-          console.error("Warehouse Fetch Error:", error);
-        }
-      };
-  
-      fetchWarehouses();
-    }, []);
-    
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("❌ No token found for warehouse");
+        return;
+      }
+
+      try {
+        const warehouseList = await getWarehouses();
+        // console.log("📦 Warehouse Data:", warehouseList);
+        setGetWarehouses(warehouseList); // สมมุติว่าข้อมูลเป็น array
+      } catch (error) {
+        setError("❌ ไม่สามารถโหลดข้อมูลคลังสินค้าได้");
+        console.error("Warehouse Fetch Error:", error);
+      }
+    };
+
+    fetchWarehouses();
+  }, []);
+
   useEffect(() => {
     const fetchCategories = async () => {
       const token = localStorage.getItem("token");
@@ -121,38 +130,35 @@ const StockPage: React.FC = () => {
 
     fetchCategories();
   }, []);
-    
-    
-    
 
   const getProductDetails = (barcode: string) => {
     return products.find((product) => product.barcode === barcode);
   };
   const getLocationName = (locationId: string) => {
-    const location = Warehouses.find(w => w._id === locationId);
+    const location = Warehouses.find((w) => w._id === locationId);
     return location ? location.location : "ไม่ทราบที่เก็บ";
   };
 
   const getCategoryNameById = (categoryId: string | undefined) => {
     if (!categoryId || !Array.isArray(categories)) return "ไม่ทราบหมวดหมู่";
 
-    const category = categories.find(cat => cat._id === categoryId);
+    const category = categories.find((cat) => cat._id === categoryId);
     return category ? category.name : "ไม่ทราบหมวดหมู่";
   };
-  
-
 
   const formatThaiDateTime = (dateString: string) =>
-    new Date(dateString).toLocaleString("th-TH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Bangkok"
-    }).replace("น.", "").trim() + " น.";
-
+    new Date(dateString)
+      .toLocaleString("th-TH", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Bangkok",
+      })
+      .replace("น.", "")
+      .trim() + " น.";
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -198,14 +204,13 @@ const StockPage: React.FC = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
-      
+
       {user?.role !== "employee" && (
-      
-      <Link to="/add-product">
-        <button className="add-product-button">
-          <FontAwesomeIcon icon={faPlus} /> เพิ่มสินค้า
+        <Link to="/add-product">
+          <button className="add-product-button">
+            <FontAwesomeIcon icon={faPlus} /> เพิ่มสินค้า
           </button>
-      </Link>
+        </Link>
       )}
       {!loading && !error && (
         <table className="stock-table">
@@ -234,7 +239,9 @@ const StockPage: React.FC = () => {
                     onClick={() => handleRowClick(item.barcode)} // กดแล้วไปหน้ารายละเอียด
                   >
                     <td className="stock-cell">{index + 1}</td>
-                    <td className="stock-cell">{product ? product.name : "ไม่พบสินค้า"}</td>
+                    <td className="stock-cell">
+                      {product ? product.name : "ไม่พบสินค้า"}
+                    </td>
                     <td className="stock-cell">
                       {product && product.imageUrl ? (
                         <img src={product.imageUrl} className="product-image" />
@@ -244,19 +251,27 @@ const StockPage: React.FC = () => {
                     </td>
                     <td className="stock-cell">{product?.price} บาท</td>
                     <td className="stock-cell">{item.quantity}</td>
-                    <td className="stock-cell">{getLocationName(item.location)}</td>
+                    <td className="stock-cell">
+                      {getLocationName(item.location)}
+                    </td>
                     <td className="stock-cell">{item.supplier}</td>
                     <td className="stock-cell status-cell">
                       {getStatusIcon(item.status)} {item.status}
                     </td>
-                    <td className="stock-cell">{getCategoryNameById(product.category)}</td>
-                    <td className="stock-cell">{formatThaiDateTime(item.updatedAt)}</td>
+                    <td className="stock-cell">
+                      {getCategoryNameById(product.category)}
+                    </td>
+                    <td className="stock-cell">
+                      {formatThaiDateTime(item.updatedAt)}
+                    </td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={10} className="no-data">🔍 ไม่พบข้อมูลสินค้าในร้านของคุณ</td>
+                <td colSpan={10} className="no-data">
+                  🔍 ไม่พบข้อมูลสินค้าในร้านของคุณ
+                </td>
               </tr>
             )}
           </tbody>

@@ -16,7 +16,7 @@ export const fetchReceipts = async () => {
 // 📌 ดึงข้อมูลใบเสร็จตาม `saleId`
 export async function fetchReceiptById(paymentId: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/receipts/paymentId/${paymentId}`);
+    const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`);
     if (!response.ok) {
       throw new Error("ไม่สามารถดึงข้อมูลใบเสร็จได้");
     }
@@ -34,5 +34,15 @@ export const deleteReceipt = async (saleId: string) => {
   } catch (error) {
     console.error("Error deleting receipt:", error);
     return false;
+  }
+};
+
+export const fetchSalesSummary = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/receipts/sales-summary`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching sales summary:", error);
+    return { success: false };
   }
 };

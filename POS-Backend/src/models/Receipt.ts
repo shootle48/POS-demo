@@ -15,7 +15,7 @@ export interface IReceipt extends Document {
     paymentMethod: "เงินสด" | "QR Code" | "บัตรเครดิต" | "โอนผ่านธนาคาร";
     amountPaid?: number;    // 💰 เงินที่ลูกค้าจ่าย (เฉพาะเงินสด)
     changeAmount?: number;  // 💵 เงินทอน
-    timestamp: Date;
+    timestamp: number; // Changed to number for UNIX timestamp
 }
 
 // 🔹 Schema สำหรับใบเสร็จ
@@ -39,7 +39,11 @@ const ReceiptSchema: Schema<IReceipt> = new Schema({
     },
     amountPaid: { type: Number },
     changeAmount: { type: Number, default: 0 },
-    timestamp: { type: Date, default: Date.now },
+    timestamp: { 
+        type: Number, 
+        default: () => Math.floor(Date.now() / 1000), // Convert to UNIX timestamp (seconds)
+        required: true 
+    }
 });
 
 // 🔹 สร้าง Model

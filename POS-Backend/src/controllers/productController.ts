@@ -1,20 +1,23 @@
-import { Request, Response, NextFunction } from 'express';
-import Product from '../models/Product';
-import jwt from 'jsonwebtoken'; // นำเข้า jwt สำหรับการตรวจสอบ token
-import User from '../models/User'; // นำเข้า model User
-import Employee from '../models/Employee'; // แก้ path ตามโฟลเดอร์ของคุณ
-import Category from '../models/Category';
-
+import { Request, Response, NextFunction } from "express";
+import Product from "../models/Product";
+import jwt from "jsonwebtoken"; // นำเข้า jwt สำหรับการตรวจสอบ token
+import User from "../models/User"; // นำเข้า model User
+import Employee from "../models/Employee"; // แก้ path ตามโฟลเดอร์ของคุณ
+import Category from "../models/Category";
 
 const verifyToken = (token: string) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET as string);
   } catch (error) {
-    throw new Error('Invalid token');
+    throw new Error("Invalid token");
   }
 };
 // ฟังก์ชันค้นหาสินค้าจาก barcode
-export const getProductByBarcode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getProductByBarcode = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const barcode = req.params.barcode; // ดึง barcode จาก URL params
 
@@ -23,7 +26,7 @@ export const getProductByBarcode = async (req: Request, res: Response, next: Nex
 
     if (!product) {
       // หากไม่พบสินค้า, ส่ง status 404
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Product not found" });
       return;
     }
 
@@ -31,19 +34,20 @@ export const getProductByBarcode = async (req: Request, res: Response, next: Nex
     res.status(200).json(product);
   } catch (error) {
     // หากเกิดข้อผิดพลาดภายใน, ส่ง status 500
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-
-
-export const getProducts = async (req: Request, res: Response): Promise<void> => {
-  const token = req.header('Authorization')?.split(' ')[1];
+export const getProducts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
     res.status(401).json({
       success: false,
-      message: 'Unauthorized, no token provided',
+      message: "Unauthorized, no token provided",
     });
     return;
   }
@@ -51,7 +55,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
   try {
     const decoded = verifyToken(token);
 
-    if (typeof decoded !== 'string' && 'userId' in decoded) {
+    if (typeof decoded !== "string" && "userId" in decoded) {
       const userId = decoded.userId;
 
       // ลองหาใน User ก่อน ถ้าไม่เจอค่อยหาใน Employee
@@ -63,20 +67,20 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found',
+          message: "User not found",
         });
         return;
       }
 
       let ownerId: string;
 
-      if (user.role === 'admin' || user.role === 'manager') {
+      if (user.role === "admin" || user.role === "manager") {
         ownerId = user._id.toString();
-      } else if (user.role === 'employee') {
+      } else if (user.role === "employee") {
         if (!user.adminId) {
           res.status(400).json({
             success: false,
-            message: 'Employee does not have an admin assigned',
+            message: "Employee does not have an admin assigned",
           });
           return;
         }
@@ -84,7 +88,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       } else {
         res.status(403).json({
           success: false,
-          message: 'Invalid user role',
+          message: "Invalid user role",
         });
         return;
       }
@@ -98,20 +102,23 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     } else {
       res.status(401).json({
         success: false,
-        message: 'Invalid token',
+        message: "Invalid token",
       });
     }
   } catch (error) {
     console.error(error);
     res.status(403).json({
       success: false,
-      message: 'Forbidden, invalid token',
+      message: "Forbidden, invalid token",
     });
   }
 };
 
-
-export const getAllProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getAllProducts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const products = await Product.find(); // ค้นหาสินค้าทั้งหมดจาก MongoDB
 
@@ -119,17 +126,20 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
     res.json(products);
   } catch (error) {
     // หากเกิดข้อผิดพลาดภายใน, ส่ง status 500
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-export const getProductsByCategory = async (req: Request, res: Response): Promise<void> => {
-  const token = req.header('Authorization')?.split(' ')[1]; // ดึง token จาก header
+export const getProductsByCategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const token = req.header("Authorization")?.split(" ")[1]; // ดึง token จาก header
 
   if (!token) {
     res.status(401).json({
       success: false,
-      message: 'Unauthorized, no token provided',
+      message: "Unauthorized, no token provided",
     });
     return;
   }
@@ -137,7 +147,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
   try {
     const decoded = verifyToken(token);
 
-    if (typeof decoded !== 'string' && 'userId' in decoded) {
+    if (typeof decoded !== "string" && "userId" in decoded) {
       const userId = decoded.userId;
       const category = req.params.category;
 
@@ -150,7 +160,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found',
+          message: "User not found",
         });
         return;
       }
@@ -158,13 +168,13 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       // หา ownerId ตาม role
       let ownerId: string;
 
-      if (user.role === 'admin' || user.role === 'manager') {
+      if (user.role === "admin" || user.role === "manager") {
         ownerId = user._id.toString();
-      } else if (user.role === 'employee') {
+      } else if (user.role === "employee") {
         if (!user.adminId) {
           res.status(400).json({
             success: false,
-            message: 'Employee does not have an admin assigned',
+            message: "Employee does not have an admin assigned",
           });
           return;
         }
@@ -172,7 +182,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       } else {
         res.status(403).json({
           success: false,
-          message: 'Invalid user role',
+          message: "Invalid user role",
         });
         return;
       }
@@ -183,7 +193,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       if (products.length === 0) {
         res.status(404).json({
           success: false,
-          message: 'No products found for this category',
+          message: "No products found for this category",
         });
         return;
       }
@@ -195,25 +205,28 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
     } else {
       res.status(401).json({
         success: false,
-        message: 'Invalid token',
+        message: "Invalid token",
       });
     }
   } catch (error) {
     console.error(error);
     res.status(403).json({
       success: false,
-      message: 'Forbidden, invalid token',
+      message: "Forbidden, invalid token",
     });
   }
 };
 
-export const getCategories = async (req: Request, res: Response): Promise<void> => {
-  const token = req.header('Authorization')?.split(' ')[1];
+export const getCategories = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
     res.status(401).json({
       success: false,
-      message: 'Unauthorized, no token provided',
+      message: "Unauthorized, no token provided",
     });
     return;
   }
@@ -221,7 +234,7 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
   try {
     const decoded = verifyToken(token);
 
-    if (typeof decoded !== 'string' && 'userId' in decoded) {
+    if (typeof decoded !== "string" && "userId" in decoded) {
       const userId = decoded.userId;
 
       let user = await User.findById(userId);
@@ -232,7 +245,7 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
       if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found',
+          message: "User not found",
         });
         return;
       }
@@ -240,13 +253,13 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
       // หาค่า ownerId ตาม role
       let ownerId: string;
 
-      if (user.role === 'admin' || user.role === 'manager') {
+      if (user.role === "admin" || user.role === "manager") {
         ownerId = user._id.toString();
-      } else if (user.role === 'employee') {
+      } else if (user.role === "employee") {
         if (!user.adminId) {
           res.status(400).json({
             success: false,
-            message: 'Employee does not have an admin assigned',
+            message: "Employee does not have an admin assigned",
           });
           return;
         }
@@ -254,13 +267,15 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
       } else {
         res.status(403).json({
           success: false,
-          message: 'Invalid user role',
+          message: "Invalid user role",
         });
         return;
       }
 
       // ใช้ distinct ดึง category ทั้งหมดแบบไม่ซ้ำ
-      const categories = await Product.distinct('category', { userId: ownerId });
+      const categories = await Product.distinct("category", {
+        userId: ownerId,
+      });
 
       res.status(200).json({
         success: true,
@@ -269,31 +284,35 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
     } else {
       res.status(401).json({
         success: false,
-        message: 'Invalid token',
+        message: "Invalid token",
       });
     }
   } catch (error) {
     console.error(error);
     res.status(403).json({
       success: false,
-      message: 'Forbidden, invalid token',
+      message: "Forbidden, invalid token",
     });
   }
 };
 
-
-export const fetchCategories = async (req: Request, res: Response): Promise<void> => {
-  const token = req.header('Authorization')?.split(' ')[1];
+export const fetchCategories = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
-    res.status(401).json({ success: false, message: 'Unauthorized: No token provided' });
+    res
+      .status(401)
+      .json({ success: false, message: "Unauthorized: No token provided" });
     return;
   }
 
   try {
     const decoded = verifyToken(token);
 
-    if (typeof decoded !== 'string' && 'userId' in decoded) {
+    if (typeof decoded !== "string" && "userId" in decoded) {
       const userId = decoded.userId;
 
       let user = await User.findById(userId);
@@ -302,30 +321,35 @@ export const fetchCategories = async (req: Request, res: Response): Promise<void
       }
 
       if (!user) {
-        res.status(404).json({ success: false, message: 'User not found' });
+        res.status(404).json({ success: false, message: "User not found" });
         return;
       }
 
-      const ownerId = user.role === 'employee' ? user.adminId : user._id;
+      const ownerId = user.role === "employee" ? user.adminId : user._id;
       const categories = await Category.find({ adminId: ownerId });
 
       res.status(200).json({ success: true, data: categories });
     } else {
-      res.status(401).json({ success: false, message: 'Invalid token' });
+      res.status(401).json({ success: false, message: "Invalid token" });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Failed to fetch categories' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch categories" });
   }
 };
 
-export const addCategory = async (req: Request, res: Response): Promise<void> => {
-  const token = req.header('Authorization')?.split(' ')[1];
+export const addCategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
     res.status(401).json({
       success: false,
-      message: 'Unauthorized, no token provided',
+      message: "Unauthorized, no token provided",
     });
     return;
   }
@@ -333,7 +357,7 @@ export const addCategory = async (req: Request, res: Response): Promise<void> =>
   try {
     const decoded = verifyToken(token);
 
-    if (typeof decoded !== 'string' && 'userId' in decoded) {
+    if (typeof decoded !== "string" && "userId" in decoded) {
       const userId = decoded.userId;
 
       let user = await User.findById(userId);
@@ -344,7 +368,7 @@ export const addCategory = async (req: Request, res: Response): Promise<void> =>
       if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found',
+          message: "User not found",
         });
         return;
       }
@@ -354,7 +378,7 @@ export const addCategory = async (req: Request, res: Response): Promise<void> =>
       if (!name || name.trim() === "") {
         res.status(400).json({
           success: false,
-          message: 'Category name is required',
+          message: "Category name is required",
         });
         return;
       }
@@ -364,7 +388,7 @@ export const addCategory = async (req: Request, res: Response): Promise<void> =>
       if (existingCategory) {
         res.status(400).json({
           success: false,
-          message: 'Category already exists',
+          message: "Category already exists",
         });
         return;
       }
@@ -373,27 +397,36 @@ export const addCategory = async (req: Request, res: Response): Promise<void> =>
         name,
         description,
         adminId: decoded.userId, // ✅ เปลี่ยนจาก managerId เป็น adminId
-
       });
 
       await newCategory.save();
 
       res.status(201).json({
         success: true,
-        message: 'Category added successfully',
+        message: "Category added successfully",
         data: newCategory,
       });
     } else {
       res.status(401).json({
         success: false,
-        message: 'Invalid token',
+        message: "Invalid token",
       });
     }
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error while adding category',
+      message: "Server error while adding category",
     });
+  }
+};
+
+export const deleteProduct = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await Product.findByIdAndDelete(id);
+    res.json({ message: "ลบสินค้าจากสต็อกเรียบร้อย" });
+  } catch (error) {
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการลบสินค้า" });
   }
 };

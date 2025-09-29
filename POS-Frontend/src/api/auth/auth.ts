@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL;
 // ฟังก์ชันสำหรับการลงทะเบียนผู้ใช้ใหม่
 export const registerUser = async (email: string, password: string, username: string, firstName: string, lastName: string, nameStore: string) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/register`, {
+    const response = await axios.post(`${API_BASE_URL}/auth/register`, {
       nameStore,
       email,
       password,
@@ -81,7 +81,7 @@ export const renewToken = async (token: string) => {
 
 export const googleLogin = async (googleToken: string) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/google-login`, {
+    const response = await axios.post(`${API_BASE_URL}/auth/google-login`, {
       googleToken
     });
 

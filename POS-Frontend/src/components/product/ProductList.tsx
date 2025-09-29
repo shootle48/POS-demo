@@ -117,7 +117,7 @@ const ProductList: React.FC<CartProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const fetchProducts = async () => {
       try {
         const productData = await getProducts();
-        console.log("Product data: ", productData);
+        // console.log("Product data: ", productData);
 
         if (productData.success && Array.isArray(productData.data)) {
           const allProducts = productData.data;
@@ -173,7 +173,7 @@ const ProductList: React.FC<CartProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
         }
 
-        console.log("📦 Category Data:", categoryList);
+        // console.log("📦 Category Data:", categoryList);
       } catch (error) {
       
         console.error("Category Fetch Error:", error);
