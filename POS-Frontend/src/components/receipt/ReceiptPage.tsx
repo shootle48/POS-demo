@@ -21,7 +21,12 @@ interface Receipt {
   paymentMethod: string;
   amountPaid: number;
   changeAmount: number;
-  timestamp: string;
+  timestamp: number; // Changed to number for UNIX timestamp
+  formattedDate?: {
+    thai: string;
+    iso: string;
+    unix: number;
+  };
 }
 
 export default function ReceiptPage() {
@@ -36,8 +41,7 @@ export default function ReceiptPage() {
         if (response.length > 0) {
           // เรียงลำดับตาม timestamp (ใหม่กว่ามาก่อน)
           const sortedReceipts = response.sort(
-            (a: Receipt, b: Receipt) =>
-              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            (a: Receipt, b: Receipt) => b.timestamp - a.timestamp
           );
           setReceipts(sortedReceipts);
         } else {
@@ -53,19 +57,23 @@ export default function ReceiptPage() {
     getReceipts();
   }, []);
 
-  const formatThaiDateTime = (dateString: string) =>
-    new Date(dateString)
-      .toLocaleString("th-TH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-        timeZone: "Asia/Bangkok",
-      })
-      .replace("น.", "")
-      .trim() + " น.";
+  const formatThaiDateTime = (timestamp: number) => {
+    const date = new Date(timestamp * 1000); // Convert UNIX seconds to milliseconds
+    return (
+      date
+        .toLocaleString("th-TH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone: "Asia/Bangkok",
+        })
+        .replace("น.", "")
+        .trim() + " น."
+    );
+  };
 
   return (
     <div className="receipt-container">
@@ -79,7 +87,7 @@ export default function ReceiptPage() {
           <thead>
             <tr>
               <th>ลำดับ</th>
-              <th>วันที่</th> {/* เพิ่มคอลัมน์วันที่ */}
+              <th>วันที่</th>
               <th>พนักงาน</th>
               <th>ยอดรวม</th>
               <th>วิธีการชำระเงิน</th>
@@ -91,8 +99,10 @@ export default function ReceiptPage() {
               receipts.map((receipt, index) => (
                 <tr key={receipt._id}>
                   <td>{index + 1}</td>
-                  <td>{formatThaiDateTime(receipt.timestamp)}</td>{" "}
-                  {/* ใช้ formatDate() เพื่อแสดงวันที่และเวลา */}
+                  <td>
+                    {receipt.formattedDate?.thai ||
+                      formatThaiDateTime(receipt.timestamp)}
+                  </td>
                   <td>{receipt.employeeName}</td>
                   <td>{receipt.totalPrice.toLocaleString()} บาท</td>
                   <td>{receipt.paymentMethod}</td>

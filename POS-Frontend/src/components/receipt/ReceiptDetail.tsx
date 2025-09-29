@@ -22,11 +22,18 @@ interface Receipt {
     paymentMethod: string;
     amountPaid: number;
     changeAmount: number;
-    timestamp: string;
+    timestamp: number; // Changed to number for UNIX timestamp
+    formattedDate?: {
+        thai: string;
+        iso: string;
+        unix: number;
+    };
 }
 
-const formatThaiDateTime = (dateString: string) =>
-    new Date(dateString).toLocaleString("th-TH", {
+// Updated format function to handle UNIX timestamp
+const formatThaiDateTime = (timestamp: number) => {
+    const date = new Date(timestamp * 1000); // Convert UNIX seconds to milliseconds
+    return date.toLocaleString("th-TH", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -35,6 +42,7 @@ const formatThaiDateTime = (dateString: string) =>
         hour12: false,
         timeZone: "Asia/Bangkok"
     }).replace("น.", "").trim() + " น.";
+};
 
 
 
@@ -84,7 +92,10 @@ export default function ReceiptDetail() {
 
                 {!loading && !error && receipt && (
                     <>
-                        <p><strong>วันที่:</strong> {formatThaiDateTime(receipt.timestamp)}</p>
+                        <p><strong>วันที่:</strong> {
+                            receipt.formattedDate?.thai || 
+                            formatThaiDateTime(receipt.timestamp)
+                        }</p>
                         <p><strong>พนักงาน:</strong> {receipt.employeeName ?? "ไม่ระบุ"}</p>
                         <hr />
 
@@ -122,7 +133,9 @@ export default function ReceiptDetail() {
             </div>
 
             {/* ปุ่มพิมพ์ใบเสร็จ */}
-            <button className="receipt-detail-print-button" onClick={handlePrint}>🖨️ พิมพ์ใบเสร็จ</button>
+            <button className="receipt-detail-print-button" onClick={handlePrint}>
+                🖨️ พิมพ์ใบเสร็จ
+            </button>
         </div>
     );
 }

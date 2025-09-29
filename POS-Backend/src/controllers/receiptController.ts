@@ -4,10 +4,42 @@ import Receipt, { IReceipt } from "../models/Receipt";
 // 📌 ฟังก์ชันดึงใบเสร็จทั้งหมด
 export const getAllReceipts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const receipts = await Receipt.find();
-        res.status(200).json({ success: true, receipts });
+        // Get all receipts and sort by timestamp in descending order (newest first)
+        const receipts = await Receipt.find().sort({ timestamp: -1 });
+
+        // Transform receipts to include formatted dates
+        const formattedReceipts = receipts.map(receipt => {
+            const unixTimestamp = receipt.timestamp;
+            const date = new Date(unixTimestamp * 1000); // Convert seconds to milliseconds
+
+            return {
+                ...receipt.toObject(),
+                formattedDate: {
+                    thai: date.toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    }),
+                    iso: date.toISOString(),
+                    unix: unixTimestamp
+                }
+            };
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            receipts: formattedReceipts,
+            count: receipts.length
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการดึงข้อมูล", error });
+        console.error('Error in getAllReceipts:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: "เกิดข้อผิดพลาดในการดึงข้อมูล", 
+            error: error instanceof Error ? error.message : error 
+        });
     }
 };
 
