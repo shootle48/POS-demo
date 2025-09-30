@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-// import { fetchSalesSummary } from "../../api/receipt/receiptApi";
 import { Bar } from "react-chartjs-2";
 import {
     Chart as ChartJS,
@@ -11,6 +10,7 @@ import {
     Legend,
 } from "chart.js";
 import "../../styles/page/POSDashboard.css";
+import {fetchSalesSummary} from '../../api/receipt/receiptApi.ts'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
