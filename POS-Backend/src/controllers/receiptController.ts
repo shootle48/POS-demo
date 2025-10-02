@@ -4,26 +4,21 @@ import Receipt, { IReceipt } from "../models/Receipt";
 // 📌 ฟังก์ชันดึงใบเสร็จทั้งหมด
 export const getAllReceipts = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Get all receipts and sort by timestamp in descending order (newest first)
         const receipts = await Receipt.find().sort({ timestamp: -1 });
 
-        // Transform receipts to include formatted dates
         const formattedReceipts = receipts.map(receipt => {
-            const unixTimestamp = receipt.timestamp;
-            const date = new Date(unixTimestamp * 1000); // Convert seconds to milliseconds
-
+            const date = receipt.timestamp;
             return {
                 ...receipt.toObject(),
                 formattedDate: {
-                    thai: date.toLocaleDateString('th-TH', {
+                    thai: date.toLocaleString('th-TH', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
                     }),
-                    iso: date.toISOString(),
-                    unix: unixTimestamp
+                    iso: date.toISOString()
                 }
             };
         });
@@ -79,80 +74,64 @@ export const deleteReceipt = async (req: Request, res: Response): Promise<void> 
 
 export const getReceiptSummary = async (req: Request, res: Response): Promise<void> => {
     try {
-        const now = Math.floor(Date.now() / 1000); // Current UNIX timestamp in seconds
-        const secondsInDay = 86400;
+        const now = new Date();
         
-        // Calculate start timestamps
-        const startOfToday = Math.floor(now / secondsInDay) * secondsInDay;
-        
-        // For week, first get current day (0 = Sunday, 6 = Saturday)
-        const currentDay = new Date().getDay();
-        const startOfWeek = startOfToday - (currentDay * secondsInDay);
-        
-        // For month, get first day of current month
-        const currentDate = new Date();
-        const startOfMonth = Math.floor(new Date(
-            currentDate.getFullYear(),
-            currentDate.getMonth(),
-            1
-        ).getTime() / 1000);
+        // Calculate start dates
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Debug logs
-        console.log('Query timestamps:', {
-            startOfToday,
-            startOfWeek,
-            startOfMonth,
-            now
-        });
+        // Query with proper date handling
+        const todayReceipts = await Receipt.find({ 
+            timestamp: { $gte: startOfToday } 
+        }).sort({ timestamp: 1 });
 
-        // Query with UNIX timestamps
-        const todayReceipts = await Receipt.aggregate([
-            {
-                $match: {
-                    timestamp: { $gte: startOfToday }
-                }
-            }
-        ]);
+        const weekReceipts = await Receipt.find({ 
+            timestamp: { $gte: startOfWeek } 
+        }).sort({ timestamp: 1 });
 
-        const weekReceipts = await Receipt.aggregate([
-            {
-                $match: {
-                    timestamp: { $gte: startOfWeek }
-                }
-            }
-        ]);
+        const monthReceipts = await Receipt.find({ 
+            timestamp: { $gte: startOfMonth } 
+        }).sort({ timestamp: 1 });
 
-        const monthReceipts = await Receipt.aggregate([
-            {
-                $match: {
-                    timestamp: { $gte: startOfMonth }
-                }
-            }
-        ]);
-
-        // เพิ่ม logging เพื่อดูผลลัพธ์
-        console.log('Query results:', {
-            todayCount: todayReceipts.length,
-            weekCount: weekReceipts.length,
-            monthCount: monthReceipts.length
-        });
-
-        // คงส่วน calcSummary ไว้เหมือนเดิม
+        // ปรับฟังก์ชัน calcSummary ให้จัดการ Date object อย่างถูกต้อง
         const calcSummary = (receipts: IReceipt[]) => ({
             totalPrice: receipts.reduce((sum, r) => sum + (r.totalPrice || 0), 0),
             amountPaid: receipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0),
             changeAmount: receipts.reduce((sum, r) => sum + (r.changeAmount || 0), 0),
+            profit: receipts.reduce((sum, r) => sum + (r.profit || 0), 0),
             count: receipts.length,
-            details: receipts.map(r => ({
-                employeeName: r.employeeName,
-                timestamp: r.timestamp,
-                items: r.items.map(i => ({
-                    name: i.name,
-                    quantity: i.quantity,
-                    subtotal: i.subtotal
-                }))
-            }))
+            details: receipts.map(r => {
+                const date = new Date(r.timestamp);
+                return {
+                    employeeName: r.employeeName,
+                    timestamp: date,
+                    formattedDate: {
+                        thai: date.toLocaleString('th-TH', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'long',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        iso: date.toISOString()
+                    },
+                    items: r.items.map(i => ({
+                        name: i.name,
+                        quantity: i.quantity,
+                        subtotal: i.subtotal
+                    }))
+                };
+            })
         });
+
+        // Debug logs
+        console.log('Today receipts:', todayReceipts.length);
+        console.log('Week receipts:', weekReceipts.length);
+        console.log('Month receipts:', monthReceipts.length);
 
         res.status(200).json({
             success: true,

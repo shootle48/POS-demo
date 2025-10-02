@@ -57,23 +57,16 @@ export default function ReceiptPage() {
     getReceipts();
   }, []);
 
-  const formatThaiDateTime = (timestamp: number) => {
-    const date = new Date(timestamp * 1000); // Convert UNIX seconds to milliseconds
-    return (
-      date
-        .toLocaleString("th-TH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-          timeZone: "Asia/Bangkok",
-        })
-        .replace("น.", "")
-        .trim() + " น."
-    );
-  };
+  const formatThaiDateTime = (dateString: string) =>
+    new Date(dateString).toLocaleString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Bangkok"
+    }).replace("น.", "").trim() + " น.";
 
   return (
     <div className="receipt-container">

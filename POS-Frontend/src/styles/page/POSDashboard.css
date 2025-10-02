@@ -1,102 +1,88 @@
-/* ตั้งค่าหลักสำหรับ container */
+/* ✅ Container หลัก */
 .report-sale-container {
-    width: 90%;
-      max-width: 1200px;
-      margin: 20px auto;
-      margin-left: 80px;
-      margin-top: 70px;
-      background-color: #ffffff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 40px rgba(0, 0, 0, 0.1);
-  /* สีพื้นหลังอ่อน */
-}
-.report-sale-title{
-      font-size: 24px;
-        text-align: center;
-        color: #6c5ce7;
-        margin-bottom: 20px;
-}
-
-.report-sale-main {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ส่วนของภาพรวมยอดขาย */
-.report-sale-overview,
-.report-sale-product-info {
+  width: 90%;
+  max-width: 1200px;
+  margin: 70px auto 20px auto;
   background-color: #ffffff;
-  padding: 15px;
-  border-radius: 6px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 15px;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.08);
 }
 
-.report-sale-overview h2,
-.report-sale-product-info h2 {
+/* ✅ Title */
+.report-sale-title {
+  font-size: 26px;
+  font-weight: bold;
+  text-align: center;
   color: #6c5ce7;
-  /* ใช้สีหลักสำหรับหัวข้อ */
-  font-size: 1.4rem;
-  /* ลดขนาดฟอนต์ */
-  margin-bottom: 10px;
+  margin-bottom: 25px;
 }
 
-.report-sale-overview p,
-.report-sale-product-info p {
+/* ✅ ส่วนสรุปยอดขาย */
+.report-sale-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+  color: white;
   font-size: 1rem;
-  /* ลดขนาดฟอนต์ */
-  margin-bottom: 8px;
-  color: #333;
-  /* สีข้อความที่เข้ม */
+  font-weight: 600;
+  padding: 18px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(108, 92, 231, 0.3);
+  text-align: center;
+  transition: transform 0.2s ease-in-out;
 }
 
-/* ข้อมูลยอดขาย */
+.summary-card:hover {
+  transform: translateY(-3px);
+}
+
+/* ✅ กราฟ */
 .report-sale-chart {
-  width: 80%;
-  /* กำหนดความกว้างของกราฟ */
-  height: 300px;
-  /* กำหนดความสูงของกราฟ */
-  margin: 0 auto;
-  /* จัดให้กราฟอยู่กลาง */
-}
-.report-sale-chart h2 {
-  color: #6c5ce7;
-  /* ใช้สีหลักสำหรับหัวข้อกราฟ */
-  font-size: 1.4rem;
-  /* ลดขนาดฟอนต์ */
-  margin-bottom: 15px;
-}
-/* ส่วนของกราฟ */
-.chart-container {
-  width: 100%;
-  max-width: 700px;
-  /* ลดขนาดกราฟ */
+  width: 85%;
+  max-width: 800px;
   margin: 0 auto;
 }
 
-/* สำหรับส่วนอื่นๆ */
-.report-sale-container p {
-  color: #555;
+/* ✅ Error */
+.error-text {
+  color: red;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 20px;
 }
-.report-sale-revenue{
-    background-color: #ffffff;
-      padding: 15px;
-      border-radius: 6px;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-      margin-bottom: 15px;
+
+
+/* ✅ ปุ่ม Filter */
+.filter-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 25px;
 }
-.report-sale-revenue-title{
-  color: #6c5ce7;
-  /* ใช้สีหลักสำหรับหัวข้อ */
-  font-size: 1.4rem;
-  /* ลดขนาดฟอนต์ */
-  margin-bottom: 10px;
+
+.filter-buttons button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #dfe6e9;
+  color: #2d3436;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
 }
-.report-sale-revenue-list{
-    font-size: 1rem;
-      /* ลดขนาดฟอนต์ */
-      margin-bottom: 8px;
-      color: #333;
-      /* สีข้อความที่เข้ม */
+
+.filter-buttons button:hover {
+  background-color: #b2bec3;
+}
+
+.filter-buttons button.active {
+  background-color: #6c5ce7;
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(108, 92, 231, 0.4);
 }
