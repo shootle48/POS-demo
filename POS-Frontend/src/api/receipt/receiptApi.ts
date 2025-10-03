@@ -16,7 +16,7 @@ export const fetchReceipts = async () => {
 // ดึงข้อมูลใบเสร็จตาม `saleId`
 export async function fetchReceiptById(paymentId: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`);
+    const response = await fetch(`${API_BASE_URL}/receipts/paymentId/${paymentId}`);
     if (!response.ok) {
       throw new Error("ไม่สามารถดึงข้อมูลใบเสร็จได้");
     }
