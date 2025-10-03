@@ -12,7 +12,7 @@ interface SellProductParams {
 }
 
 
-// ✅ ดึงข้อมูล stock ตาม token
+// ดึงข้อมูล stock ตาม token
 export const getStockData = async (token: string) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/stocks`, {
@@ -42,7 +42,7 @@ export const getStockByBarcode = async (barcode: string) => {
   }
 };
 
-// 📌 ดึง Stock ตาม Product ID
+// ดึง Stock ตาม Product ID
 export const getStockByProductId = async (productId: string) => {
   try {
     const response = await axios.get(`${API_BASE_URL}?productId=${productId}`);
@@ -142,7 +142,7 @@ export const getProducts = async () => {
   }
 };
 
-// ✅ Delete Stock by Barcode
+// Delete Stock by Barcode
 export const deleteStock = async (barcode: string) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");

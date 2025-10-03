@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// ✅ ดึงพนักงานทั้งหมด (มีอยู่แล้ว)
+// ดึงพนักงานทั้งหมด (มีอยู่แล้ว)
 export const getEmployeesByManager = async (token: string) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/employee`, {
@@ -18,7 +18,7 @@ export const getEmployeesByManager = async (token: string) => {
   }
 };
 
-// ✅ เพิ่มพนักงานใหม่ (มีอยู่แล้ว)
+// เพิ่มพนักงานใหม่ (มีอยู่แล้ว)
 export const addEmployee = async (
   employee: {
     email: string;
@@ -47,7 +47,7 @@ export const addEmployee = async (
   }
 };
 
-// ✅ อัปเดตข้อมูลพนักงาน (มีอยู่แล้ว)
+// อัปเดตข้อมูลพนักงาน (มีอยู่แล้ว)
 export const updateEmployee = async (
   employeeId: string,
   updatedEmployeeData: {
@@ -79,7 +79,7 @@ export const updateEmployee = async (
   }
 };
 
-// ✅ ดึงข้อมูลพนักงานตาม ID
+// ดึงข้อมูลพนักงานตาม ID
 export const getEmployeeById = async (employeeId: string, token: string) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/employee/${employeeId}`, {
@@ -92,7 +92,7 @@ export const getEmployeeById = async (employeeId: string, token: string) => {
   }
 };
 
-// ✅ ลบพนักงาน
+// ลบพนักงาน
 export const deleteEmployee = async (employeeId: string, token: string) => {
   try {
     const response = await axios.delete(`${API_BASE_URL}/employee/${employeeId}`, {

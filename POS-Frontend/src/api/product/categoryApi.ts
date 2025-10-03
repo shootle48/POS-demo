@@ -52,7 +52,7 @@ export const createCategory = async (data: CategoryData): Promise<any> => {
 };
 
 
-// ✅ อัปเดต category
+// อัปเดต category
 export const updateCategory = async (id: string, data: any) => {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('No token found');
@@ -68,7 +68,7 @@ export const updateCategory = async (id: string, data: any) => {
   }
 };
 
-// ✅ ลบ category
+// ลบ category
 export const deleteCategory = async (id: string) => {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('No token found');

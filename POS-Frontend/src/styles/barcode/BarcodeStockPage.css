@@ -366,6 +366,7 @@
 
 .barcode-settings-form label input[type="checkbox"] {
     width: 16px;
+    margin-right: 250px;
     height: 16px;
     cursor: pointer;
 }

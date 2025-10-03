@@ -84,7 +84,6 @@ const BarcodeModal: React.FC<BarcodeModalProps> = ({
                 <div className="barcode-modal-preview">
                     <p>{item.productId.name}</p>
                     <svg className="barcode-modal-svg" id="barcode-modal-svg"></svg>
-                    <p>{item.barcode}</p>
                     <p>฿{item.productId.price?.toFixed(2) || "0.00"}</p>
                 </div>
 

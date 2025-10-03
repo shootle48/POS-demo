@@ -4,7 +4,7 @@ import Stock from "../models/Stock";
 import Product from "../models/Product";
 import { verifyToken } from "../utils/auth";
 
-// ✅ สร้าง Transaction ใหม่
+//  สร้าง Transaction ใหม่
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
     try {
         const token = req.headers["authorization"]?.split(" ")[1];
@@ -20,21 +20,21 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 
         const { stockId, productId, type, quantity, referenceId, costPrice, salePrice, notes } = req.body;
 
-        // ✅ ตรวจสอบ stock
+        //  ตรวจสอบ stock
         const stock = await Stock.findById(stockId);
         if (!stock) {
             res.status(404).json({ success: false, message: "Stock not found" });
             return;
         }
 
-        // ✅ ตรวจสอบ product
+        //  ตรวจสอบ product
         const product = await Product.findById(productId);
         if (!product) {
             res.status(404).json({ success: false, message: "Product not found" });
             return;
         }
 
-        // ✅ อัปเดตจำนวนใน Stock ตาม type
+        //  อัปเดตจำนวนใน Stock ตาม type
         if (type === "SALE") {
             if (stock.quantity < quantity) {
                 res.status(400).json({
@@ -51,7 +51,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
         }
         await stock.save();
 
-        // ✅ สร้าง Transaction
+        //  สร้าง Transaction
         const transaction = new StockTransaction({
             stockId,
             productId,
@@ -59,10 +59,14 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
             quantity,
             referenceId,
             userId: decoded.userId,
-            costPrice,
-            salePrice,
+            //  ดึงราคาจาก Stock ถ้ามี ถ้าไม่มี fallback ไปที่ Product
+            costPrice: stock.costPrice ?? product.price,
+            salePrice: stock.salePrice ?? product.price,
             notes,
         });
+
+        await transaction.save();
+
 
         await transaction.save();
 
@@ -73,7 +77,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// ✅ ดึงประวัติ Transaction ทั้งหมด
+//  ดึงประวัติ Transaction ทั้งหมด
 export const getAllTransactions = async (_: Request, res: Response): Promise<void> => {
     try {
         const transactions = await StockTransaction.find()
@@ -88,7 +92,7 @@ export const getAllTransactions = async (_: Request, res: Response): Promise<voi
     }
 };
 
-// ✅ ดึง Transaction ตามสินค้า
+//  ดึง Transaction ตามสินค้า
 export const getTransactionsByProduct = async (req: Request, res: Response): Promise<void> => {
     try {
         const transactions = await StockTransaction.find({ productId: req.params.productId })
@@ -102,7 +106,7 @@ export const getTransactionsByProduct = async (req: Request, res: Response): Pro
     }
 };
 
-// ✅ ดึง Transaction ตาม Stock
+//  ดึง Transaction ตาม Stock
 export const getTransactionsByStock = async (req: Request, res: Response): Promise<void> => {
     try {
         const transactions = await StockTransaction.find({ stockId: req.params.stockId })

@@ -19,7 +19,7 @@ import Search from "./components/product/BarcodeSearch";
 import SalePage from "./components/pages/Dashboard";
 import PaymentPage from "./components/payment/PaymentPage";
 import EmployeeList from "./components/aboutStore/EmployeePage";
-import OrderPage from "./components/purchaseOrder/PurchaseOrderPage";
+import PurchaseOrderPage from "./components/purchaseOrder/PurchaseOrderPage";
 import EmployeePage from "./components/pages/Employee/Dashboard-employee";
 import StockTransaction from "./components/stock/StockTransaction";
 import ExpiredPage from "./components/stock/ExpiredPage";
@@ -185,7 +185,7 @@ const App: React.FC = () => {
           <Route path="setting/employee" element={<EmployeeList />} />
           <Route path="/reports/receipts" element={<ReceiptPage />} />
           <Route path="/products/search" element={<Search />} />
-          <Route path="/debt" element={<OrderPage />} />
+          <Route path="/purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="/reports/sales" element={<SalePage />} />
           <Route path="/employee-dashboard" element={<EmployeePage />} />
           <Route path="/shop" element={<ProductList isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} />

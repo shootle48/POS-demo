@@ -13,6 +13,7 @@ dotenv.config();
 
 
 // ✅ เพิ่มสินค้า + สต็อก
+// ✅ เพิ่มสินค้า + สต็อก
 export const addProductWithStock = async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers['authorization']?.split(' ')[1];
@@ -42,9 +43,8 @@ export const addProductWithStock = async (req: Request, res: Response): Promise<
       { resource_type: 'auto' },
       async (err, result) => {
         if (err || !result) {
-          console.error(err);
-          res.status(500).json({ success: false, message: 'Error uploading image' });
-          return;
+          console.error("❌ Cloudinary Upload Error:", err);
+          return res.status(500).json({ success: false, message: 'Error uploading image' });
         }
 
         const {
@@ -57,48 +57,41 @@ export const addProductWithStock = async (req: Request, res: Response): Promise<
           threshold,
           supplierId,
           units,
-          costPrice,   // ✅ ราคาทุน
-          salePrice,   // ✅ ราคาขาย (optional)
+          costPrice,
+          salePrice,
         } = req.body;
 
+        // ✅ parse units
         let unitArray: any[] = [];
         try {
-          if (typeof units === "string") {
-            unitArray = JSON.parse(units);
-          } else if (Array.isArray(units)) {
-            unitArray = units;
-          }
+          if (typeof units === "string") unitArray = JSON.parse(units);
+          else if (Array.isArray(units)) unitArray = units;
         } catch (err) {
           console.error("❌ Error parsing units:", err);
           unitArray = [];
         }
-        
-        // ✅ ถ้าไม่ได้ส่ง salePrice มา → ใช้ costPrice + 20%
+
+        // ✅ ราคาทุน/ขาย
         const finalCostPrice = Number(costPrice) || 0;
-        const finalSalePrice =
-          salePrice !== undefined && salePrice !== ""
-            ? Number(salePrice)
-            : finalCostPrice * 1.2;
+        const finalSalePrice = salePrice && salePrice !== ""
+          ? Number(salePrice)
+          : finalCostPrice * 1.2;
 
-        // ✅ Parse barcode safely
-        let finalBarcode = barcode ? String(barcode) : "";
-        if (!finalBarcode || finalBarcode.trim() === "") {
-          finalBarcode = `BC${Date.now().toString().slice(-6)}${Math.floor(100 + Math.random() * 900)}`;
+        // ✅ Gen barcode อัตโนมัติถ้าว่างหรือเป็น ","
+        let finalBarcode: string;
+        if (barcode && String(barcode).trim() !== "" && String(barcode).trim() !== ",") {
+          finalBarcode = String(barcode).trim();
+        } else {
+          finalBarcode = `BC${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
+        // ✅ supplier / warehouse
         const supplierDoc = await Supplier.findById(supplierId);
-        if (!supplierDoc) {
-          res.status(400).json({ success: false, message: 'ไม่พบบริษัทผู้จัดจำหน่าย' });
-          return;
-        }
+        if (!supplierDoc) return res.status(400).json({ success: false, message: 'ไม่พบบริษัทผู้จัดจำหน่าย' });
 
         const warehouseDoc = await Warehouse.findOne({ location });
-        if (!warehouseDoc) {
-          res.status(400).json({ success: false, message: `ไม่พบคลังสินค้าที่ชื่อ "${location}"` });
-          return;
-        }
+        if (!warehouseDoc) return res.status(400).json({ success: false, message: `ไม่พบคลังสินค้าที่ชื่อ "${location}"` });
 
-       
         // ✅ Product
         const newProduct = new Product({
           name,
@@ -111,7 +104,14 @@ export const addProductWithStock = async (req: Request, res: Response): Promise<
           supplierId: supplierDoc._id,
         });
 
-        await newProduct.save();
+        try {
+          await newProduct.save();
+        } catch (err: any) {
+          if (err.code === 11000) {
+            return res.status(400).json({ success: false, message: `❌ Barcode ซ้ำ: ${finalBarcode}` });
+          }
+          throw err;
+        }
 
         // ✅ Stock
         const newStock = new Stock({
@@ -134,18 +134,17 @@ export const addProductWithStock = async (req: Request, res: Response): Promise<
 
         res.status(201).json({
           success: true,
-          message: 'Product and stock created successfully',
+          message: '✅ Product and stock created successfully',
           data: { product: newProduct, stock: newStock }
         });
       }
     ).end(req.file.buffer);
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ addProductWithStock Error:", error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-
 
 // ✅ อัปเดตสินค้า + สต็อก
 export const updateProductWithStock = async (req: Request, res: Response): Promise<void> => {

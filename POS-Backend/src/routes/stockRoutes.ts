@@ -23,3 +23,4 @@ router.post("/:barcode/adjust", adjustStockByBarcode);
 router.delete("/:barcode", deleteStockByBarcode);
 
 export default router;
+

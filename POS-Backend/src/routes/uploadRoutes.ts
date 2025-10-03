@@ -10,4 +10,3 @@ router.post('/upload', upload.single('image'), addProductWithStock);
 router.patch('/update', upload.single('image'), updateProductWithStock);
 
 export default router;
-

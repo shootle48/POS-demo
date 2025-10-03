@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// 📌 ดึงรายการใบเสร็จทั้งหมด
+// ดึงรายการใบเสร็จทั้งหมด
 export const fetchReceipts = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/receipts`);
@@ -13,7 +13,7 @@ export const fetchReceipts = async () => {
   }
 };
 
-// 📌 ดึงข้อมูลใบเสร็จตาม `saleId`
+// ดึงข้อมูลใบเสร็จตาม `saleId`
 export async function fetchReceiptById(paymentId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`);
@@ -26,7 +26,7 @@ export async function fetchReceiptById(paymentId: string) {
   }
 }
 
-// 📌 ลบใบเสร็จตาม `saleId`
+// ลบใบเสร็จตาม `saleId`
 export const deleteReceipt = async (saleId: string) => {
   try {
     const response = await axios.delete(`${API_BASE_URL}/receipts/${saleId}`);

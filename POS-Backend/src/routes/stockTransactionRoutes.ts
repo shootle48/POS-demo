@@ -7,7 +7,7 @@ import {
 } from "../controllers/stockTransactionController";
 
 const router = express.Router();
-router.post("/", createTransaction);
+router.post("/create", createTransaction);
 router.get("/transactions", getAllTransactions);
 router.get("/product/:productId", getTransactionsByProduct);
 router.get("/stock/:stockId", getTransactionsByStock);

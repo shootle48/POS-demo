@@ -135,9 +135,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               <FontAwesomeIcon icon={faBarcode} className="icon" />{" "}
               <span className="dropdown-text-barcode">บาร์โค้ด</span>
             </li>
-            <li onClick={() => handleMenuClick("/debt", "ค้างชำระ")}>
+            <li onClick={() => handleMenuClick("/purchase-orders", "คำสั่งซื้อ")}>
               <FontAwesomeIcon icon={faScroll} className="icon" />{" "}
-              <span className="dropdown-text-debt">ค้างชำระ</span>
+              <span className="dropdown-text-purchase-orders">คำสั่งซื้อ</span>
             </li>
             <li onClick={() => handleMenuClick("/expired", "สินค้าเหลือน้อย/สินค้าหมด")}>
               <FontAwesomeIcon icon={faExclamationTriangle} className="icon" />{" "}

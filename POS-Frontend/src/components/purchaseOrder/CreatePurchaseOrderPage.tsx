@@ -21,8 +21,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
     const [productName, setProductName] = useState("");
     const [quantity, setQuantity] = useState(1);
     const [costPrice, setCostPrice] = useState(0);
-    const [batchNumber, setBatchNumber] = useState("");
-    const [expiryDate, setExpiryDate] = useState("");
 
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState("");
@@ -63,7 +61,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
                 imageUrl: item.product.imageUrl,
                 category: item.product.category,
                 supplierId: item.product.supplierId,
-                isSelfPurchased: item.product.isSelfPurchased,
                 createdAt: item.product.createdAt,
                 updatedAt: item.product.updatedAt,
 
@@ -73,10 +70,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
                 costPrice: item.stock?.costPrice || 0,
                 salePrice: item.stock?.salePrice || item.product.price,
                 status: item.stock?.status,
-                expiryDate: item.stock?.expiryDate || "",
-                threshold: item.stock?.threshold,
-                lastRestocked: item.stock?.lastRestocked,
-                location: item.stock?.location,
                 isActive: item.stock?.isActive,
             }));
 
@@ -90,22 +83,24 @@ const CreatePurchaseOrderPage: React.FC = () => {
 
     // เพิ่มสินค้าเข้า items
     const handleAddItem = () => {
-        if (!productId || !productName || quantity <= 0 || costPrice <= 0 || !batchNumber) {
-            setMessage("❌ กรุณากรอกข้อมูลสินค้าให้ครบถ้วน");
+        if (!productId || !productName || quantity <= 0 || costPrice <= 0) {
+            setMessage("❌ กรุณาเลือกสินค้าและกรอกจำนวนให้ถูกต้อง");
             setShowErrorPopup(true);
             return;
         }
 
+        // หาสินค้าใน products เพื่อดึง stockId มาด้วย
+        const selectedProduct = products.find((p: any) => p._id === productId);
+
         setItems([
             ...items,
             {
+                stockId: selectedProduct?.stockId || null, //เพิ่ม stockId มาด้วย
                 productId,
                 productName,
                 quantity,
                 costPrice,
                 total: quantity * costPrice,
-                batchNumber,
-                expiryDate,
             },
         ]);
 
@@ -114,9 +109,8 @@ const CreatePurchaseOrderPage: React.FC = () => {
         setProductName("");
         setQuantity(1);
         setCostPrice(0);
-        setBatchNumber("");
-        setExpiryDate("");
     };
+
 
     // ลบสินค้า
     const handleRemoveItem = (id: string) => {
@@ -210,11 +204,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
                                         setProductId(selected._id);
                                         setProductName(selected.name);
                                         setCostPrice(selected.costPrice || 0);
-                                        setExpiryDate(
-                                            selected.expiryDate
-                                                ? selected.expiryDate.split("T")[0]
-                                                : ""
-                                        ); // auto-fill
                                     }
                                 }}
                             >
@@ -251,28 +240,12 @@ const CreatePurchaseOrderPage: React.FC = () => {
                                         readOnly
                                     />
                                 </div>
-                                <div className="form-group-suppliers">
-                                    <label>Batch Number:</label>
-                                    <input
-                                        type="text"
-                                        value={batchNumber}
-                                        onChange={(e) => setBatchNumber(e.target.value)}
-                                    />
-                                </div>
-                                <div className="form-group-suppliers">
-                                    <label>วันหมดอายุ:</label>
-                                    <input
-                                        type="date"
-                                        value={expiryDate}
-                                        onChange={(e) => setExpiryDate(e.target.value)}
-                                    />
-                                </div>
                                 <button
                                     type="button"
                                     className="add-item-btn"
                                     onClick={handleAddItem}
                                 >
-                                    ➕ เพิ่มสินค้า
+                                    เพิ่มสินค้า
                                 </button>
                             </>
                         )}
@@ -288,16 +261,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
                                         <li key={idx}>
                                             {item.productName} - {item.quantity} ชิ้น
                                             (ต้นทุน {item.costPrice} บาท)
-                                            [Batch {item.batchNumber}]
-                                            {item.expiryDate && (
-                                                <span>
-                                                    {" "}
-                                                    🗓️ หมดอายุ:{" "}
-                                                    {new Date(item.expiryDate).toLocaleDateString(
-                                                        "th-TH"
-                                                    )}
-                                                </span>
-                                            )}
                                             <button
                                                 className="remove-item-btn"
                                                 onClick={() => handleRemoveItem(item.productId)}
@@ -321,7 +284,7 @@ const CreatePurchaseOrderPage: React.FC = () => {
                         </div>
 
                         {/* ปุ่มสร้าง PO */}
-                        <button className="submit-btn" onClick={handleSubmit}>
+                        <button className="add-item-btn" onClick={handleSubmit}>
                             ✅ สร้างใบสั่งซื้อ
                         </button>
                     </>
@@ -338,6 +301,7 @@ const CreatePurchaseOrderPage: React.FC = () => {
                                     setShowSuccessPopup(false);
                                     navigate("/purchase-orders");
                                 }}
+                                className="popup-close-btn"
                             >
                                 ปิด
                             </button>
@@ -352,7 +316,7 @@ const CreatePurchaseOrderPage: React.FC = () => {
                                 className="order-icon-error"
                             />
                             <h3>{message}</h3>
-                            <button onClick={() => setShowErrorPopup(false)}>ปิด</button>
+                            <button className="popup-close-btn" onClick={() => setShowErrorPopup(false)}>ปิด</button>
                         </div>
                     </div>
                 )}

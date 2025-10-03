@@ -1,6 +1,6 @@
 /* ==============================
-   Modal Overlay
-============================== */
+       Modal Overlay
+    ============================== */
 .product-detail-modal-overlay {
     position: fixed;
     top: 0;
@@ -8,7 +8,6 @@
     width: 100vw;
     height: 100vh;
     background: rgba(17, 24, 39, 0.55);
-    /* dark overlay */
     backdrop-filter: blur(6px);
     display: flex;
     justify-content: center;
@@ -18,12 +17,14 @@
 }
 
 /* ==============================
-   Modal Content
-============================== */
+       Modal Content (Default - Desktop)
+    ============================== */
 .product-detail-modal-content {
     background: #ffffff;
-    width: 800px;
-    max-width: 95%;
+    width: 90%;
+    /* กำหนดเป็น % แทน px */
+    max-width: 800px;
+    /* ล็อกไม่ให้เกิน */
     max-height: 92vh;
     margin-top: 20px;
     border-radius: 18px;
@@ -36,9 +37,7 @@
     flex-direction: column;
 }
 
-/* ==============================
-   Close Button
-============================== */
+/* Close Button */
 .modal-close {
     position: absolute;
     top: 14px;
@@ -60,9 +59,7 @@
     color: #fff;
 }
 
-/* ==============================
-   Heading
-============================== */
+/* Heading */
 .product-detail-modal-content h2 {
     margin-bottom: 24px;
     font-size: 22px;
@@ -71,14 +68,13 @@
     color: #111827;
 }
 
-/* ==============================
-   Tabs
-============================== */
+/* Tabs */
 .tabs {
     display: flex;
     justify-content: center;
     gap: 16px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 .tab {
@@ -103,9 +99,7 @@
     background: #e5e7eb;
 }
 
-/* ==============================
-   Form Layout (GRID)
-============================== */
+/* Form Layout */
 .stock-detail-form {
     display: flex;
     flex-direction: column;
@@ -125,33 +119,25 @@
 }
 
 .stock-form-group label {
-    margin-top: 5px;
     font-size: 13px;
     font-weight: 600;
     color: #374151;
 }
 
+.stock-form-group input,
+.stock-form-group select,
 .stock-form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-    font-size: 14px;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid #d1d5db;
+    font-size: 14px;
     background: #f9fafb;
     transition: all 0.25s ease;
 }
 
-
-.stock-form-group input,
-.stock-form-group select {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    font-size: 14px;
-    color: #111827;
-    background: #f9fafb;
-    transition: all 0.25s ease;
+.stock-form-group textarea {
+    resize: vertical;
+    min-height: 80px;
 }
 
 .stock-form-group input:focus,
@@ -163,9 +149,7 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
-/* ==============================
-   Image Preview
-============================== */
+/* Image Preview */
 .stock-product-preview {
     margin-top: 12px;
     max-width: 180px;
@@ -174,30 +158,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* ==============================
-   Import Button
-============================== */
-.stock-import-btn {
-    margin-top: 16px;
-    background: linear-gradient(135deg, #10b981, #059669);
-    border: none;
-    padding: 12px 20px;
-    border-radius: 10px;
-    color: #fff;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.stock-import-btn:hover {
-    background: linear-gradient(135deg, #059669, #047857);
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-}
-
-/* ==============================
-   Form Actions
-============================== */
+/* Form Actions */
 .stock-form-actions {
     display: flex;
     justify-content: flex-end;
@@ -218,9 +179,6 @@
 .save-btn {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .save-btn:hover {
@@ -228,28 +186,6 @@
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
 
-.save-btn.loading {
-    background: #9ca3af;
-    cursor: not-allowed;
-}
-
-/* Spinner */
-.spinner {
-    width: 18px;
-    height: 18px;
-    border: 3px solid #fff;
-    border-top: 3px solid transparent;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Delete Button */
 .delete-btn {
     background: #ef4444;
     color: white;
@@ -260,9 +196,7 @@
     transform: scale(1.05);
 }
 
-/* ==============================
-   Animations
-============================== */
+/* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -282,5 +216,54 @@
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+/* ==============================
+       Responsive Breakpoints
+    ============================== */
+/* Laptop / MacBook 13" */
+@media (max-width: 1440px) {
+    .product-detail-modal-content {
+        width: 85%;
+        max-width: 720px;
+        padding: 24px 28px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .product-detail-modal-content {
+        width: 90%;
+        max-width: 650px;
+        padding: 20px 24px;
+    }
+
+    .stock-form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .product-detail-modal-content {
+        width: 95%;
+        max-width: 95%;
+        padding: 16px 20px;
+        max-height: 88vh;
+    }
+
+    .stock-form-row {
+        grid-template-columns: 1fr;
+        /* ให้เหลือ 1 คอลัมน์ */
+    }
+
+    .stock-form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stock-form-actions button {
+        width: 100%;
     }
 }

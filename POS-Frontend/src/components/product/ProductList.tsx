@@ -345,17 +345,11 @@ const ProductList: React.FC<CartProps> = ({ isSidebarOpen }) => {
       return;
     }
 
-    const validPaymentMethods = ["เงินสด", "โอนเงิน", "บัตรเครดิต", "QR Code"] as const;
-    if (!validPaymentMethods.includes(selectedPaymentMethod)) {
-      setErrorMessage("วิธีการชำระเงินไม่ถูกต้อง");
-      return;
-    }
-
     const orderData = {
-      saleId: new Date().getTime().toString(), // ไว้เป็นเลขใบเสร็จแสดงผล แต่ไม่ใช่ referenceId
+      saleId: new Date().getTime().toString(),
       userId: user.userId,
       items: cart.map(item => ({
-        productId: item._id,         // ✅ ส่ง productId ด้วย
+        productId: item._id,
         barcode: item.barcode,
         name: item.name,
         price: item.price,
@@ -369,21 +363,42 @@ const ProductList: React.FC<CartProps> = ({ isSidebarOpen }) => {
     };
 
     try {
-      const response = await createOrder(orderData); // ⚡ เปลี่ยนจาก createPayment → createOrder API
-      if (!response.success) {
-        setErrorMessage(response.message);
+      // 1) สร้าง Order
+      const orderRes = await createOrder(orderData);
+      if (!orderRes.success) {
+        setErrorMessage(orderRes.message);
         return;
       }
 
-      console.log("✅ สร้าง Order สำเร็จ:", response.data);
+      console.log("✅ Order created:", orderRes.data);
+
+      // 2) สร้าง Payment
+      const paymentData = {
+        saleId: orderData.saleId, // ใช้ saleId เดียวกัน
+        employeeName: user?.username || "ลูกค้า",
+        paymentMethod: selectedPaymentMethod,
+        amount: getTotalPrice(),
+        amountReceived,
+        change: amountReceived - getTotalPrice(),
+        items: orderData.items,
+      };
+
+      const paymentRes = await createPayment(paymentData);
+      if (!paymentRes.success) {
+        setErrorMessage(paymentRes.message);
+        return;
+      }
+
+      console.log("✅ Payment saved:", paymentRes.data);
 
       // clear cart
       setCart([]);
       setShowCart(false);
-      setTimeout(() => setShowCart(false), 3000);
-    } catch (error) {
-      console.error("💥 Checkout error:", error);
-      setErrorMessage("เกิดข้อผิดพลาดในการสร้างออเดอร์");
+      setPopupVisible(true);
+
+    } catch (err) {
+      console.error("💥 Checkout error:", err);
+      setErrorMessage("เกิดข้อผิดพลาดในการสร้างออเดอร์/การชำระเงิน");
     }
   };
 
