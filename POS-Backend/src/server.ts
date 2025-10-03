@@ -16,6 +16,7 @@ import receiptRoutes from "./routes/receiptRoutes";
 import warehouseRoutes from "./routes/warehouseRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import purchaseOrderRouter from "./routes/purchaseOrderRoutes";
+import dashboardRoutes from './routes/dashboardRoutes';
 import cors from "cors";
 
 
@@ -132,6 +133,7 @@ app.use("/api/warehouses", warehouseRoutes);
 app.use("/api/stocks", Stock);
 app.use("/api/stock", StockTransaction);
 app.use("/api/",purchaseOrderRouter);
+app.use('/api/dashboard', dashboardRoutes);
 
 
 // เริ่มเซิร์ฟเวอร์

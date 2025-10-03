@@ -15,64 +15,52 @@ import { fetchSalesSummary } from "../../api/receipt/receiptApi";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface SummaryData {
-  totalPrice: number;
-  amountPaid: number;
-  changeAmount: number;
-  count: number;
-  profit: number;
-  details: {
-    employeeName: string;
-    timestamp: string | Date;
-    items: { name: string; quantity: number; subtotal: number }[];
-  }[];
+interface TimeFrameData {
+  totalSales: number;
+  totalQuantity: number; // Add totalQuantity field
+  growth: number;
+  netSales: number;
+  totalProfit: number;
+  bestSeller: {
+    name: string;
+    quantity: number;
+    revenue: number;
+  };
+  formattedDate: {
+    thai: string;
+    iso: string;
+  };
 }
 
-// ✅ รวมยอดขายตามวัน
-const aggregateSalesByDay = (details: SummaryData["details"]) => {
-  const salesByDay = details.reduce((acc, curr) => {
-    const date = new Date(curr.timestamp);
-    const dayKey = date.toLocaleDateString("th-TH", {
-      day: "2-digit",
-      month: "short",
-    });
+interface DashboardData {
+  daily: TimeFrameData;
+  weekly: TimeFrameData;
+  monthly: TimeFrameData;
+}
 
-    if (!acc[dayKey]) {
-      acc[dayKey] = { total: 0, date };
-    }
-
-    const dayTotal = curr.items.reduce((sum, item) => sum + item.subtotal, 0);
-    acc[dayKey].total += dayTotal;
-
-    return acc;
-  }, {} as Record<string, { total: number; date: Date }>);
-
-  const sortedDays = Object.entries(salesByDay).sort(
-    (a, b) => a[1].date.getTime() - b[1].date.getTime()
-  );
-
-  return {
-    labels: sortedDays.map(([day]) => day),
-    totals: sortedDays.map(([_, data]) => data.total),
-  };
-};
+function formatThaiShortDate(dateString: string): string {
+  // แปลงวันที่ให้เป็นรูปแบบย่อ
+  const date = new Date(dateString);
+  return date.toLocaleString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).replace(' น.', '');
+}
 
 export default function SalesSummary() {
-  const [today, setToday] = useState<SummaryData | null>(null);
-  const [thisWeek, setThisWeek] = useState<SummaryData | null>(null);
-  const [thisMonth, setThisMonth] = useState<SummaryData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"day" | "week" | "month">("week"); // ✅ filter state
+  const [filter, setFilter] = useState<"daily" | "weekly" | "monthly">("weekly");
 
   useEffect(() => {
     const getSummary = async () => {
       try {
         const res = await fetchSalesSummary();
         if (res.success) {
-          setToday(res.today);
-          setThisWeek(res.thisWeek);
-          setThisMonth(res.thisMonth);
+          setDashboardData(res.data);
         } else {
           setError("ไม่สามารถดึงข้อมูลได้");
         }
@@ -87,19 +75,17 @@ export default function SalesSummary() {
 
   if (loading) return <p>⏳ กำลังโหลดข้อมูล...</p>;
   if (error) return <p className="error-text">❌ {error}</p>;
+  if (!dashboardData) return <p>ไม่พบข้อมูล</p>;
 
-  // ✅ เลือก dataset ตาม filter
-  let selectedData: SummaryData | null = null;
-  if (filter === "day") selectedData = today;
-  if (filter === "week") selectedData = thisWeek;
-  if (filter === "month") selectedData = thisMonth;
+  const selectedData = dashboardData[filter];
 
+  // ปรับข้อมูลสำหรับกราฟ
   const salesData = {
-    labels: selectedData ? aggregateSalesByDay(selectedData.details).labels : [],
+    labels: [formatThaiShortDate(selectedData.formattedDate.iso)],
     datasets: [
       {
         label: "ยอดขาย (บาท)",
-        data: selectedData ? aggregateSalesByDay(selectedData.details).totals : [],
+        data: [selectedData.totalSales],
         borderColor: "#6c5ce7",
         backgroundColor: "rgba(108, 92, 231, 0.2)",
         fill: true,
@@ -117,17 +103,29 @@ export default function SalesSummary() {
       legend: { position: "top" as const },
       title: {
         display: true,
-        text:
-          filter === "day"
-            ? "ยอดขายวันนี้"
-            : filter === "week"
-            ? "ยอดขายรายสัปดาห์"
-            : "ยอดขายรายเดือน",
+        text: `ยอดขาย${filter === "daily" ? "วันนี้" : 
+              filter === "weekly" ? "สัปดาห์นี้" : 
+              "เดือนนี้"}`,
         font: { size: 18 },
         color: "#2d3436",
       },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            const value = context.raw;
+            return `฿${value.toLocaleString()}`;
+          }
+        }
+      }
     },
-    scales: { y: { beginAtZero: true } },
+    scales: { 
+      y: { 
+        beginAtZero: true,
+        ticks: {
+          callback: (value: number) => `฿${value.toLocaleString()}`
+        }
+      }
+    },
   };
 
   return (
@@ -136,37 +134,55 @@ export default function SalesSummary() {
         <h1 className="report-sale-title">📊 รายงานยอดขาย</h1>
       </header>
 
-      {/* ✅ ปุ่ม Filter */}
       <div className="filter-buttons">
         <button
-          className={filter === "day" ? "active" : ""}
-          onClick={() => setFilter("day")}
+          className={filter === "daily" ? "active" : ""}
+          onClick={() => setFilter("daily")}
         >
           รายวัน
         </button>
         <button
-          className={filter === "week" ? "active" : ""}
-          onClick={() => setFilter("week")}
+          className={filter === "weekly" ? "active" : ""}
+          onClick={() => setFilter("weekly")}
         >
           รายสัปดาห์
         </button>
         <button
-          className={filter === "month" ? "active" : ""}
-          onClick={() => setFilter("month")}
+          className={filter === "monthly" ? "active" : ""}
+          onClick={() => setFilter("monthly")}
         >
           รายเดือน
         </button>
       </div>
 
-      {/* ✅ ส่วนสรุปยอดขาย */}
       <section className="report-sale-summary">
-        <div className="summary-card">ยอดขายรวม: ฿{thisMonth?.totalPrice.toLocaleString()}</div>
-        <div className="summary-card">คืนเงิน: ฿{thisMonth?.changeAmount.toLocaleString()}</div>
-        <div className="summary-card">ยอดขายสุทธิ: ฿{thisMonth?.amountPaid.toLocaleString()}</div>
-        <div className="summary-card">กำไรรวม: ฿{thisMonth?.profit?.toLocaleString() ?? "0"}</div>
+        <div className="summary-card">
+          <h3>ยอดขายรวม</h3>
+          <p>{selectedData.totalQuantity.toLocaleString()} ชิ้น</p>
+          <small className={selectedData.growth >= 0 ? "positive" : "negative"}>
+            {selectedData.growth > 0 ? "+" : ""}{selectedData.growth.toFixed(2)}%
+          </small>
+        </div>
+        <div className="summary-card">
+          <h3>ยอดขายสุทธิ</h3>
+          <p>฿{selectedData.netSales.toLocaleString()}</p>
+          <small className="quantity">คิดเป็น {((selectedData.netSales / selectedData.totalSales) * 100).toFixed(2)}%</small>
+        </div>
+        <div className="summary-card profit">
+          <h3>กำไรรวม</h3>
+          <p>฿{selectedData.totalProfit.toLocaleString()}</p>
+          <small className="quantity">
+            อัตรากำไร {((selectedData.totalProfit / selectedData.totalSales) * 100).toFixed(2)}%
+          </small>
+        </div>
+        <div className="summary-card">
+          <h3>สินค้าขายดี</h3>
+          <p>{selectedData.bestSeller.name}</p>
+          <small>{selectedData.bestSeller.quantity.toLocaleString()} ชิ้น</small>
+          <small className="revenue">฿{selectedData.bestSeller.revenue.toLocaleString()}</small>
+        </div>
       </section>
 
-      {/* ✅ กราฟ */}
       <main className="report-sale-main">
         <section className="report-sale-chart">
           <Line data={salesData} options={options} />

@@ -39,7 +39,7 @@ export const deleteReceipt = async (saleId: string) => {
 
 export const fetchSalesSummary = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/receipts/sales-summary`);
+    const response = await axios.get(`${API_BASE_URL}/dashboard/stats`);
     return response.data;
   } catch (error) {
     console.error("Error fetching sales summary:", error);
