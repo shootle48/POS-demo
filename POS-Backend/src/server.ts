@@ -123,13 +123,13 @@ app.use("/api/products/barcode", productRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/product", uploadRoutes);
 app.use("/api/auth", authRoutes);  // ใช้เพียงเส้นทางนี้
-app.use("/api/stocks", Stock);
 app.use('/api/', orderRoutes);
 app.use('/api/suppliers', Supplier)
 app.use('/api/employee', employeeRouter);
 app.use('/api/payment', createPayment);
 app.use("/api/receipts", receiptRoutes);
 app.use("/api/warehouses", warehouseRoutes);
+app.use("/api/stocks", Stock);
 app.use("/api/stock", StockTransaction);
 app.use("/api/",purchaseOrderRouter);
 
