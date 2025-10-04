@@ -17,8 +17,8 @@ import warehouseRoutes from "./routes/warehouseRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import purchaseOrderRouter from "./routes/purchaseOrderRoutes";
 import dashboardRoutes from './routes/dashboardRoutes';
-import cors from "cors";
 
+import cors from "cors";
 
 dotenv.config();
 const app = express();

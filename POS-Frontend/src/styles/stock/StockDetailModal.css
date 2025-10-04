@@ -21,16 +21,17 @@
     ============================== */
 .product-detail-modal-content {
     background: #ffffff;
-    width: 90%;
-    /* กำหนดเป็น % แทน px */
-    max-width: 800px;
-    /* ล็อกไม่ให้เกิน */
-    max-height: 92vh;
-    margin-top: 20px;
-    border-radius: 18px;
-    padding: 28px 32px;
+    width: 100%;
+    max-width: 600px;
+    /* 🔹 จำกัดกว้างสุด */
+    max-height: 85vh;
+    /* 🔹 ไม่ให้สูงเกิน */
+    margin: auto;
+    /* 🔹 จัดกลางแนวนอน */
+    border-radius: 16px;
+    padding: 24px 28px;
     overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     animation: slideUp 0.3s ease-in-out;
     position: relative;
     display: flex;
@@ -176,6 +177,28 @@
     transition: all 0.2s ease-in-out;
 }
 
+.stock-import-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2a9d8f;
+    color: #fff;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    transition: all 0.2s ease-in-out;
+}
+.stock-import-btn:hover{
+    background: #059669;
+        transform: scale(1.05);
+}
+
 .save-btn {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
@@ -223,11 +246,22 @@
        Responsive Breakpoints
     ============================== */
 /* Laptop / MacBook 13" */
-@media (max-width: 1440px) {
+/* Tablet */
+@media (max-width: 1600px) {
     .product-detail-modal-content {
-        width: 85%;
-        max-width: 720px;
-        padding: 24px 28px;
+        margin-top: 80px;
+        max-width: 600px;
+        padding: 20px 24px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .product-detail-modal-content {
+        width: 95%;
+        max-width: 95%;
+        max-height: 80vh;
+        padding: 16px 20px;
     }
 }
 

@@ -81,7 +81,10 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 export const getAllTransactions = async (_: Request, res: Response): Promise<void> => {
     try {
         const transactions = await StockTransaction.find()
-            .populate("stockId")
+            .populate({
+                path: "stockId",
+                populate: { path: "location", model: "Warehouse" }, 
+            })
             .populate("productId")
             .populate("userId")
             .sort({ createdAt: -1 });
@@ -91,6 +94,7 @@ export const getAllTransactions = async (_: Request, res: Response): Promise<voi
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
 
 //  ดึง Transaction ตามสินค้า
 export const getTransactionsByProduct = async (req: Request, res: Response): Promise<void> => {

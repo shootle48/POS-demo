@@ -285,7 +285,7 @@ const CreatePurchaseOrderPage: React.FC = () => {
 
                         {/* ปุ่มสร้าง PO */}
                         <button className="add-item-btn" onClick={handleSubmit}>
-                            ✅ สร้างใบสั่งซื้อ
+                            สร้างใบสั่งซื้อ
                         </button>
                     </>
                 )}

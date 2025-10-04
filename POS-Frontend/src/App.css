@@ -83,6 +83,16 @@ body {
   margin-left: 50px;
   transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
 }
+.app-container.sidebar-open .stock-transaction-container {
+  margin-left: 50px;
+  transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+}
+
+.app-container.sidebar-closed .stock-transaction-container {
+  margin-left: 50px;
+  transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+}
+
 /* เมื่อ sidebar เปิดอยู่ ให้ cart มีขนาด 0px */
 .app-container.sidebar-open .employee-dashboard {
   margin-left: 150px;

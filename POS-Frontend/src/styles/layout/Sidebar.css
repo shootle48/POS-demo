@@ -1,7 +1,7 @@
 .sidebar {
     position: fixed;
     left: 0;
-    top: 60px;
+    top: 65px;
     width: 230px;
     height: calc(100% - 80px);
     /* หักความสูงของ header */

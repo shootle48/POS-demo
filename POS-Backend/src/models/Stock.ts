@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUnit {
   name: string;      // เช่น "กล่อง"
@@ -8,19 +8,19 @@ export interface IUnit {
 export interface IStock extends Document {
   productId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  supplierId: mongoose.Types.ObjectId;
-  supplierName: string;
-  location?: mongoose.Types.ObjectId; // คลังสินค้า
+  supplierId?: mongoose.Types.ObjectId;
+  supplierName?: string;
+  location?: mongoose.Types.ObjectId;
 
   quantity: number;
   threshold?: number;
-  status: 'สินค้าพร้อมขาย' | 'สินค้าหมด' | 'สินค้าเหลือน้อย';
+  status: "สินค้าพร้อมขาย" | "สินค้าหมด" | "สินค้าเหลือน้อย";
 
-  costPrice: number;     // ราคาทุนล่าสุด
-  salePrice: number;     // ราคาขายล่าสุด
-  lastPurchasePrice?: number; // ราคาที่ซื้อเข้ามาล่าสุด
-  units: IUnit[];        // multi-unit conversion
-  barcode?: string;
+  costPrice: number;       // ราคาทุน 💰
+  salePrice: number;       // ราคาขาย 💵
+  lastPurchasePrice?: number;
+  units: IUnit[];
+  barcode: string;         // ต้องมี barcode เพื่อเชื่อม Receipt
   batchNumber?: string;
   expiryDate?: Date;
 
@@ -36,19 +36,19 @@ export interface IStock extends Document {
 
 const StockSchema = new Schema<IStock>(
   {
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    supplierId: { type: Schema.Types.ObjectId, ref: 'Supplier' },
+    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    supplierId: { type: Schema.Types.ObjectId, ref: "Supplier" },
     supplierName: { type: String },
 
-    location: { type: Schema.Types.ObjectId, ref: 'Warehouse' },
+    location: { type: Schema.Types.ObjectId, ref: "Warehouse" },
 
     quantity: { type: Number, default: 0 },
     threshold: { type: Number, default: 5 },
     status: {
       type: String,
-      enum: ['สินค้าพร้อมขาย', 'สินค้าหมด', 'สินค้าเหลือน้อย'],
-      default: 'สินค้าพร้อมขาย',
+      enum: ["สินค้าพร้อมขาย", "สินค้าหมด", "สินค้าเหลือน้อย"],
+      default: "สินค้าพร้อมขาย",
     },
 
     costPrice: { type: Number, default: 0 },
@@ -62,7 +62,7 @@ const StockSchema = new Schema<IStock>(
       },
     ],
 
-    barcode: { type: String, unique: true },
+    barcode: { type: String, required: true, unique: true },
     batchNumber: { type: String },
     expiryDate: { type: Date },
 
@@ -73,19 +73,22 @@ const StockSchema = new Schema<IStock>(
   { timestamps: true }
 );
 
-// อัปเดตสถานะอัตโนมัติ
+// ✅ อัปเดตสถานะอัตโนมัติ
 StockSchema.methods.updateStatus = async function () {
   if (this.quantity <= 0) {
-    this.status = 'สินค้าหมด';
+    this.status = "สินค้าหมด";
   } else if (this.quantity <= this.threshold) {
-    this.status = 'สินค้าเหลือน้อย';
+    this.status = "สินค้าเหลือน้อย";
   } else {
-    this.status = 'สินค้าพร้อมขาย';
+    this.status = "สินค้าพร้อมขาย";
   }
   await this.save();
 };
 
-StockSchema.index({ productId: 1, location: 1 });
+// ✅ Indexes เพื่อให้ Dashboard ดึงข้อมูลเร็ว
+StockSchema.index({ barcode: 1 });
+StockSchema.index({ productId: 1 });
 StockSchema.index({ supplierId: 1 });
+StockSchema.index({ updatedAt: -1 });
 
-export default mongoose.models.Stock || mongoose.model<IStock>('Stock', StockSchema);
+export default mongoose.models.Stock || mongoose.model<IStock>("Stock", StockSchema);

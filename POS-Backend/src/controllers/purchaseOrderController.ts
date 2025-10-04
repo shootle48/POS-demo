@@ -207,7 +207,7 @@ export const updateQCStatus = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({
             success: true,
-            message: "อัปเดต QC สำเร็จ",
+            message: "เติมสต็อกสำเร็จ",
             data: po
         });
     } catch (error) {

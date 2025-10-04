@@ -84,8 +84,6 @@ const PurchaseOrderPage: React.FC = () => {
             .replace("น.", "")
             .trim() + " น.";
 
-    // เปิด confirm popup แทน window.confirm
-    // เปิด confirm popup แทน window.confirm (Cancel)
     const openCancelConfirm = (poId: string) => {
         setPopup({
             type: "confirm",
