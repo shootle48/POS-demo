@@ -44,14 +44,16 @@ export const getDashboardStats = async (
   res: Response
 ): Promise<void> => {
   try {
+    // ✅ แปลงวันที่จาก query โดยไม่บวก offset ซ้ำ
     const inputDate = req.query.date
       ? new Date(req.query.date as string)
       : new Date();
     const filter = (req.query.filter as string) || "daily";
 
-    // ปรับเวลาให้ตรงกับ Timezone ไทย (UTC+7)
-    const tzOffset = 7 * 60 * 60000;
-    const localDate = new Date(inputDate.getTime() + tzOffset);
+    // ✅ แปลงเป็นเวลาไทย (โดยไม่ขยับวัน)
+    const localDate = new Date(
+      new Date(inputDate).toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+    );
 
     // ===== กำหนดช่วงเวลา =====
     const startOfDay = new Date(localDate);
@@ -88,10 +90,9 @@ export const getDashboardStats = async (
       aggregateSales(startOfMonth, endOfMonth, "day"),
     ]);
 
-    // เติม 24 ชั่วโมง
     const dailyData = fillHours(dailyRaw, startOfDay);
 
-    // ===== รวมสรุปยอดขาย =====
+    // ===== สรุปยอดขาย =====
     const summary = {
       daily: makeSummary(dailyData),
       weekly: makeSummary(weeklyData),
@@ -100,12 +101,12 @@ export const getDashboardStats = async (
 
     // ===== รวมสินค้าขายดี =====
     const topProducts = {
-      daily: getTopProducts(dailyRaw), // ✅ ใช้ dailyRaw เพื่อรวมสินค้าทั้งวัน
+      daily: getTopProducts(dailyRaw),
       weekly: getTopProducts(weeklyData),
       monthly: getTopProducts(monthlyData),
     };
 
-    // ✅ กำหนด bestSeller ของ dailyData ให้ตรงกับสินค้าขายดีทั้งวัน
+    // ✅ แทรกสินค้าขายดีของวันในแต่ละชั่วโมง
     if (topProducts.daily.length > 0) {
       const top = topProducts.daily[0];
       dailyData.forEach((d) => {
@@ -125,7 +126,7 @@ export const getDashboardStats = async (
       monthly: await aggregateByEmployee(startOfMonth, endOfMonth),
     };
 
-    // ===== ข้อมูลช่วงก่อนหน้า =====
+    // ===== ช่วงก่อนหน้า =====
     const prevDayStart = new Date(startOfDay);
     prevDayStart.setDate(prevDayStart.getDate() - 1);
     const prevWeekStart = new Date(startOfWeek);
@@ -143,7 +144,7 @@ export const getDashboardStats = async (
       (await aggregateSales(prevMonthStart, startOfMonth, "day")) || []
     );
 
-    // ===== การเปลี่ยนแปลงเมื่อเทียบกับช่วงก่อนหน้า =====
+    // ===== การเปลี่ยนแปลง =====
     const changes = {
       daily: calcChange(summary.daily, prevDayData),
       weekly: calcChange(summary.weekly, prevWeekData),
