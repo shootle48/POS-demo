@@ -1,30 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { th } from "date-fns/locale";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
 import "../../styles/page/POSDashboard.css";
 import { fetchSalesSummary } from "../../api/receipt/receiptApi";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// ✅ Lazy Load Component
+const SalesSummaryChart = lazy(() => import("./SalesSummaryChart"));
 
 export default function SalesSummary() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -32,7 +14,28 @@ export default function SalesSummary() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const changes = data?.changes?.[filter] || {};
+  useEffect(() => {
+    const getSummary = async () => {
+      setLoading(true);
+      const res = await fetchSalesSummary(selectedDate, filter);
+      if (res.success) setData(res.data);
+      setLoading(false);
+    };
+    getSummary();
+  }, [selectedDate, filter]);
+
+  if (loading) return <p>⏳ กำลังโหลดข้อมูล...</p>;
+  if (!data) return <p>ไม่พบข้อมูล</p>;
+
+  const changes = data.changes[filter] || {};
+  const summary = data.summary[filter];
+
+  const bestSeller = data.topProducts[filter]?.[0] || {
+    name: "-",
+    quantity: 0,
+    revenue: 0,
+  };
+
   const formatChange = (value: number) => {
     if (!value || isNaN(value)) return "0.00%";
     const sign = value > 0 ? "+" : "";
@@ -48,102 +51,30 @@ export default function SalesSummary() {
   const getChangeColor = (value: number) =>
     value > 0 ? "positive" : value < 0 ? "negative" : "";
 
-  useEffect(() => {
-    const getSummary = async () => {
-      setLoading(true);
-      const res = await fetchSalesSummary(selectedDate, filter);
-      if (res.success) setData(res.data);
-      setLoading(false);
-    };
-    getSummary();
-  }, [selectedDate, filter]);
-
-  if (loading) return <p>⏳ กำลังโหลดข้อมูล...</p>;
-  if (!data || !data.summary || !data.changes) return <p>ไม่พบข้อมูล</p>;
-
-  const summary = data.summary[filter];
-  const bestSeller = data.topProducts[filter]?.[0] || {
-    name: "-",
-    quantity: 0,
-    revenue: 0,
-  };
-  const chartSet = data[filter];
-
-  // ✅ Label ของกราฟ (แสดงวันที่หรือชั่วโมงจริง)
-  const chartLabels = chartSet.map((d: any) => {
-    const date = new Date(d.formattedDate.iso);
-    if (filter === "daily")
-      return date.toLocaleTimeString("th-TH", { hour: "2-digit" });
-    else
-      return date.toLocaleDateString("th-TH", {
-        day: "numeric",
-        month: "short",
-      });
-  });
-
-  const chartData = {
-    labels: chartLabels,
-    datasets: [
-      {
-        label: "ยอดขาย (บาท)",
-        data: chartSet.map((d: any) => d.totalSales),
-        borderColor: "#6c5ce7",
-        backgroundColor: "rgba(108, 92, 231, 0.1)",
-        fill: true,
-        tension: 0.3,
-        pointRadius: 4,
-        pointBackgroundColor: "#6c5ce7",
-      },
-    ],
-  };
-
-  const chartTitle =
-    filter === "daily"
-      ? "ยอดขายวันนี้"
-      : filter === "weekly"
-        ? "ยอดขายรายสัปดาห์นี้"
-        : "ยอดขายรายเดือนนี้";
-
-  const totalSalesToday = summary.totalSales.toLocaleString();
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: { position: "top" as const },
-      title: { display: true, text: chartTitle },
-      tooltip: {
-        callbacks: {
-          label: (ctx: any) => `฿${ctx.raw.toLocaleString()}`,
-        },
-      },
-    },
-    scales: {
-      y: { beginAtZero: true },
-      x: { ticks: { font: { size: 12 } } },
-    },
-  };
-
   return (
     <div className="dashboard-wrapper">
       <h1 className="dashboard-title">📊 รายงานยอดขาย</h1>
 
-      {/* 🔹 Filter Buttons */}
+      {/* 🔸 Filter */}
       <div className="dashboard-filters">
         {["daily", "weekly", "monthly"].map((type) => (
           <button
+            type="button"
             key={type}
             className={filter === type ? "active" : ""}
-            onClick={() => setFilter(type as any)}
+            onClick={(e) => {
+              e.preventDefault(); // ✅ ป้องกันรีเฟรชหน้า
+              setFilter(type as any);
+            }}
           >
             {type === "daily"
               ? "รายวัน"
               : type === "weekly"
-                ? "รายสัปดาห์"
-                : "รายเดือน"}
+              ? "รายสัปดาห์"
+              : "รายเดือน"}
           </button>
         ))}
 
-        {/* 🔹 Date Picker */}
         <DatePicker
           selected={selectedDate}
           onChange={(date) => date && setSelectedDate(date)}
@@ -154,7 +85,7 @@ export default function SalesSummary() {
         />
       </div>
 
-      {/* 🔹 Summary Section */}
+      {/* 🔸 Summary */}
       <div className="summary-grid">
         <div className="summary-card">
           <h3>ยอดขายรวม</h3>
@@ -193,14 +124,10 @@ export default function SalesSummary() {
         </div>
       </div>
 
-      {/* 🔹 Chart Section */}
-      <div className="chart-container">
-        <h2>{chartTitle}</h2>
-        <Line data={chartData} options={options} />
-        <p className="total-sales-text">
-          💰 ยอดขายรวมทั้งหมด: ฿{totalSalesToday}
-        </p>
-      </div>
+      {/* ✅ โหลด component กราฟแบบ Lazy */}
+      <Suspense fallback={<p>⏳ กำลังโหลดกราฟ...</p>}>
+        <SalesSummaryChart filter={filter} selectedDate={selectedDate} />
+      </Suspense>
     </div>
   );
 }

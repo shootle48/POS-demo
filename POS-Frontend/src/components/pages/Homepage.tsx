@@ -53,7 +53,9 @@ export default function HomePage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [selectedExpiry, setSelectedExpiry] = useState<string[]>([]);
-  const [activeFilter, setActiveFilter] = useState<("active" | "inactive")[]>([]);
+  const [activeFilter, setActiveFilter] = useState<("active" | "inactive")[]>(
+    []
+  );
 
   // pagination (5 แถว/หน้า)
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,12 +192,40 @@ export default function HomePage() {
     return (
       <div className="display">
         <div className="home-container">
+          {/* ส่วนข้อความต้อนรับ */}
           <div className="text-section">
             <h1 className="welcome-title">ยินดีต้อนรับสู่ระบบ POS</h1>
             <p className="description">
               ระบบที่ช่วยให้การขายของคุณเป็นเรื่องง่ายและสะดวกยิ่งขึ้น
               รองรับการจัดการสินค้า รายงานยอดขาย และสต็อกสินค้าในที่เดียว!
             </p>
+
+            {/* จุดเด่นของระบบ */}
+            <div className="features">
+              <div className="feature-item">
+                ✅ <strong>จัดการสินค้า:</strong> เพิ่ม ลบ
+                แก้ไขข้อมูลสินค้าได้ง่าย
+              </div>
+              <div className="feature-item">
+                📊 <strong>รายงานยอดขาย:</strong> ดูสรุปยอดขายแบบเรียลไทม์
+              </div>
+              <div className="feature-item">
+                📦 <strong>ระบบสต็อก:</strong>{" "}
+                ควบคุมปริมาณสินค้าให้อยู่ในระดับที่เหมาะสม
+              </div>
+              <div className="feature-item">
+                💳 <strong>รองรับการชำระเงิน:</strong> รับชำระเงินหลายช่องทาง
+              </div>
+            </div>
+          </div>
+
+          {/* ส่วนรูปภาพประกอบ */}
+          <div className="image-section">
+            <img
+              className="pos-image"
+              src="https://res.cloudinary.com/dboau6axv/image/upload/v1738153705/pos_ozpgmv.jpg"
+              alt="POS System"
+            />
           </div>
         </div>
       </div>
@@ -231,7 +261,9 @@ export default function HomePage() {
     maintainAspectRatio: false,
     plugins: {
       legend: { position: "top" as const },
-      tooltip: { callbacks: { label: (ctx: any) => `฿${ctx.raw.toLocaleString()}` } },
+      tooltip: {
+        callbacks: { label: (ctx: any) => `฿${ctx.raw.toLocaleString()}` },
+      },
     },
     scales: { y: { beginAtZero: true }, x: { ticks: { font: { size: 12 } } } },
   };
@@ -264,7 +296,9 @@ export default function HomePage() {
               <button
                 className="carousel-btn left"
                 onClick={() =>
-                  (document.querySelector(".carousel-list") as HTMLElement)?.scrollBy({ left: -300, behavior: "smooth" })
+                  (
+                    document.querySelector(".carousel-list") as HTMLElement
+                  )?.scrollBy({ left: -300, behavior: "smooth" })
                 }
               >
                 ‹
@@ -273,7 +307,11 @@ export default function HomePage() {
                 {topProducts.map((p: any, i: number) => (
                   <div key={i} className="carousel-item">
                     <div className="rank">#{i + 1}</div>
-                    <img src={p.imageUrl} alt={p.name} className="carousel-img" />
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="carousel-img"
+                    />
                     <div className="carousel-info">
                       <strong>{p.name}</strong>
                       <p>จำนวนขาย: {p.quantity} ชิ้น</p>
@@ -285,7 +323,9 @@ export default function HomePage() {
               <button
                 className="carousel-btn right"
                 onClick={() =>
-                  (document.querySelector(".carousel-list") as HTMLElement)?.scrollBy({ left: 300, behavior: "smooth" })
+                  (
+                    document.querySelector(".carousel-list") as HTMLElement
+                  )?.scrollBy({ left: 300, behavior: "smooth" })
                 }
               >
                 ›
@@ -308,7 +348,11 @@ export default function HomePage() {
               <button
                 className="carousel-btn left"
                 onClick={() =>
-                  (document.querySelector(".lowstock-carousel-list") as HTMLElement)?.scrollBy({ left: -300, behavior: "smooth" })
+                  (
+                    document.querySelector(
+                      ".lowstock-carousel-list"
+                    ) as HTMLElement
+                  )?.scrollBy({ left: -300, behavior: "smooth" })
                 }
               >
                 ‹
@@ -317,7 +361,11 @@ export default function HomePage() {
                 {lowStockItems.map((item, index) => (
                   <div key={index} className="lowstock-item">
                     <div className="rank">#{index + 1}</div>
-                    <img src={item.imageUrl} alt={item.name} className="carousel-img" />
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="carousel-img"
+                    />
                     <div className="carousel-info">
                       <strong>{item.name}</strong>
                       <p>เหลือ {item.quantity} ชิ้น</p>
@@ -328,7 +376,11 @@ export default function HomePage() {
               <button
                 className="carousel-btn right"
                 onClick={() =>
-                  (document.querySelector(".lowstock-carousel-list") as HTMLElement)?.scrollBy({ left: 300, behavior: "smooth" })
+                  (
+                    document.querySelector(
+                      ".lowstock-carousel-list"
+                    ) as HTMLElement
+                  )?.scrollBy({ left: 300, behavior: "smooth" })
                 }
               >
                 ›
@@ -376,17 +428,35 @@ export default function HomePage() {
               />
               <FilterControl
                 selectedStatuses={selectedStatuses}
-                setSelectedStatuses={(v) => { setSelectedStatuses(v); setCurrentPage(1); }}
+                setSelectedStatuses={(v) => {
+                  setSelectedStatuses(v);
+                  setCurrentPage(1);
+                }}
                 selectedWarehouses={selectedWarehouses}
-                setSelectedWarehouses={(v) => { setSelectedWarehouses(v); setCurrentPage(1); }}
+                setSelectedWarehouses={(v) => {
+                  setSelectedWarehouses(v);
+                  setCurrentPage(1);
+                }}
                 selectedCategories={selectedCategories}
-                setSelectedCategories={(v) => { setSelectedCategories(v); setCurrentPage(1); }}
+                setSelectedCategories={(v) => {
+                  setSelectedCategories(v);
+                  setCurrentPage(1);
+                }}
                 selectedSuppliers={selectedSuppliers}
-                setSelectedSuppliers={(v) => { setSelectedSuppliers(v); setCurrentPage(1); }}
+                setSelectedSuppliers={(v) => {
+                  setSelectedSuppliers(v);
+                  setCurrentPage(1);
+                }}
                 selectedExpiry={selectedExpiry}
-                setSelectedExpiry={(v) => { setSelectedExpiry(v); setCurrentPage(1); }}
+                setSelectedExpiry={(v) => {
+                  setSelectedExpiry(v);
+                  setCurrentPage(1);
+                }}
                 activeFilter={activeFilter}
-                setActiveFilter={(v) => { setActiveFilter(v); setCurrentPage(1); }}
+                setActiveFilter={(v) => {
+                  setActiveFilter(v);
+                  setCurrentPage(1);
+                }}
                 warehouses={warehouses}
                 categories={categories}
                 suppliers={suppliers}
