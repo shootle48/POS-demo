@@ -75,13 +75,6 @@ const toBangkokDate = (value: Date) =>
 
 const getRangeBounds = (range: RangeKey, selected: Date) => {
   const base = toBangkokDate(selected);
-  if (range === "daily") {
-    const start = new Date(base);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-    return { start, end };
-  }
 
   if (range === "weekly") {
     const start = new Date(base);
@@ -330,11 +323,9 @@ export default function HomePage() {
 
   const summaryForRange = summaryData?.summary?.[filter] || {};
   const rangeLabel =
-    filter === "daily" ? "วันนี้" : filter === "weekly" ? "สัปดาห์นี้" : "เดือนนี้";
+    filter === "weekly" ? "สัปดาห์นี้" : "เดือนนี้";
   const lineTitle =
-    filter === "daily"
-      ? "กราฟยอดขายวันนี้ (รายชั่วโมง)"
-      : filter === "weekly"
+    filter === "weekly"
       ? "กราฟยอดขายสัปดาห์นี้ (รายวัน)"
       : "กราฟยอดขายเดือนนี้ (รายสัปดาห์)";
 
@@ -348,11 +339,12 @@ export default function HomePage() {
       if (!baseDate) return null;
       let label: string;
       let sortValue: number;
-      if (filter === "daily") {
-        const hour =
-          typeof entry?.hour === "number" ? entry.hour : baseDate.getHours();
-        label = `${String(hour).padStart(2, "0")}:00`;
-        sortValue = hour;
+      if (filter === "weekly") {
+        label = baseDate.toLocaleDateString("th-TH", {
+          day: "2-digit",
+          month: "short",
+        });
+        sortValue = baseDate.getTime();
       } else {
         label = baseDate.toLocaleDateString("th-TH", {
           day: "2-digit",
@@ -389,11 +381,15 @@ export default function HomePage() {
       let label: string;
       let sortValue: number;
 
-      if (filter === "daily") {
-        const hour = date.getHours();
-        bucketKey = String(hour);
-        label = `${String(hour).padStart(2, "0")}:00`;
-        sortValue = hour;
+      if (filter === "weekly") {
+        const day = new Date(date);
+        day.setHours(0, 0, 0, 0);
+        bucketKey = String(day.getTime());
+        label = day.toLocaleDateString("th-TH", {
+          day: "2-digit",
+          month: "short",
+        });
+        sortValue = day.getTime();
       } else {
         const day = new Date(date);
         day.setHours(0, 0, 0, 0);
