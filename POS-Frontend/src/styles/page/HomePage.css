@@ -216,16 +216,6 @@
 .home-payment-table .type-cell{ font-weight:600; color:#1d4ed8; }
 .home-payment-table .status-cell{ font-weight:600; color:#0f172a; }
 
-.timeline-scroll{ max-height: 280px; overflow:auto; padding-right:6px; }
-.timeline-scroll::-webkit-scrollbar{ width:6px; }
-.timeline-scroll::-webkit-scrollbar-thumb{
-  background:linear-gradient(180deg, rgba(99,102,241,0.6), rgba(59,130,246,0.6));
-  border-radius:999px;
-}
-.timeline-scroll::-webkit-scrollbar-track{
-  background:rgba(226,232,240,0.4);
-  border-radius:999px;
-}
 .timeline{ position:relative; padding-left:16px; }
 .timeline::before{
   content:""; position:absolute; left:7px; top:0; bottom:0;

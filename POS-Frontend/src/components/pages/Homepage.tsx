@@ -178,21 +178,22 @@ const RADIAN = Math.PI / 180;
 const renderPieValueLabel = (props: any) => {
   const { cx, cy, midAngle, innerRadius, outerRadius, name, value } = props;
   if (!outerRadius) return null;
-  const radius = innerRadius + (outerRadius - innerRadius) * 1.05;
+
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.08;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const displayValue = `${name}: ${formatCurrency(Number(value || 0))}`;
+  const rawName = name != null ? String(name) : "";
+  const truncatedName = rawName.length > 24 ? `${rawName.slice(0, 24)}…` : rawName;
+  const textAnchor = x > cx ? "start" : "end";
+  const lineHeight = 14;
+
   return (
-    <text
-      x={x}
-      y={y}
-      fill="#0f172a"
-      fontSize={12}
-      fontWeight={600}
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-    >
-      {displayValue}
+    <text x={x} y={y} fill="#0f172a" fontSize={12} fontWeight={600} textAnchor={textAnchor}>
+      {rawName && <title>{rawName}</title>}
+      {truncatedName && <tspan x={x} dy={-4}>{truncatedName}</tspan>}
+      <tspan x={x} dy={truncatedName ? lineHeight : 4}>
+        {formatCurrency(Number(value || 0))}
+      </tspan>
     </text>
   );
 };
@@ -900,35 +901,31 @@ export default function HomePage() {
           {/* Stock transactions */}
           <section className="panel card-like area-timeline">
             <h2 className="section-title">Recent Stock Transaction</h2>
-            <div className="timeline-scroll">
-              <div className="timeline">
-                {stockTimeline.map((item) => {
-                  const toneClass = item.tone === "out" ? "danger" : item.tone === "in" ? "success" : "info";
-                  return (
-                    <div key={item.id} className="timeline-item">
-                      <div className={`dot ${item.tone}`} />
-                      <div className="content">
-                        <div className="line1">
-                          <span className="when">{item.when}</span>
-                          <span className={`pill ${toneClass}`}>{item.typeLabel}</span>
-                        </div>
-                        <div className="line2">
-                          <span className="name">{item.name}</span>
-                          <span className="qty">× {Number(item.quantity).toLocaleString()}</span>
-                        </div>
-                        <div className="line3 muted">
-                          อ้างอิง: {item.reference}
-                          {item.barcode ? ` · บาร์โค้ด: ${item.barcode}` : ""}
-                        </div>
-                        {item.userName && (
-                          <div className="line4 muted">ผู้บันทึก: {item.userName}</div>
-                        )}
+            <div className="timeline">
+              {stockTimeline.map((item) => {
+                const toneClass = item.tone === "out" ? "danger" : item.tone === "in" ? "success" : "info";
+                return (
+                  <div key={item.id} className="timeline-item">
+                    <div className={`dot ${item.tone}`} />
+                    <div className="content">
+                      <div className="line1">
+                        <span className="when">{item.when}</span>
+                        <span className={`pill ${toneClass}`}>{item.typeLabel}</span>
                       </div>
+                      <div className="line2">
+                        <span className="name">{item.name}</span>
+                        <span className="qty">× {Number(item.quantity).toLocaleString()}</span>
+                      </div>
+                      <div className="line3 muted">
+                        อ้างอิง: {item.reference}
+                        {item.barcode ? ` · บาร์โค้ด: ${item.barcode}` : ""}
+                      </div>
+                      {item.userName && <div className="line4 muted">ผู้บันทึก: {item.userName}</div>}
                     </div>
-                  );
-                })}
-                {stockTimeline.length === 0 && <div className="muted">— ไม่มีข้อมูล —</div>}
-              </div>
+                  </div>
+                );
+              })}
+              {stockTimeline.length === 0 && <div className="muted">— ไม่มีข้อมูล —</div>}
             </div>
           </section>
 
