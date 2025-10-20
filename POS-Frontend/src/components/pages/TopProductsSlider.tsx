@@ -6,6 +6,7 @@ type TopItem = {
   imageUrl?: string;
   quantity?: number;
   revenue?: number | string;
+  rank?: number;
 };
 
 type Props = {
@@ -37,13 +38,17 @@ export default function TopProductsSlider({
       {...(reverse ? { ["reverse" as any]: "true" } : {})}
     >
       <div className="list">
-        {items.map((it, idx) => (
+        {items.map((it, idx) => {
+          const rank = typeof it.rank === "number" ? it.rank : idx + 1;
+          return (
           <div
             className="item"
             key={`${it.name}-${idx}`}
+            data-rank={rank}
             style={{ ["--position" as any]: idx + 1 } as React.CSSProperties}
             title={it.name}
           >
+            <div className={`rank-badge rank-${rank}`}>#{rank}</div>
             <div className="img-wrap">
               <img
                 src={
@@ -67,7 +72,8 @@ export default function TopProductsSlider({
               </div>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

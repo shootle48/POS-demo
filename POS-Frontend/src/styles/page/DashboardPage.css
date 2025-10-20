@@ -114,6 +114,27 @@
 .area-pay-history { grid-area: payHistory; }
 .area-timeline { grid-area: timeline; }
 
+.area-top-list .top5-slider{
+  margin: 0 -8px;
+}
+
+.area-top-list .top5-slider .caption{
+  padding: 8px 10px;
+}
+
+.area-top-list .top5-slider .caption .title{
+  font-size: 0.92rem;
+}
+
+.area-top-list .top5-slider .caption .sub{
+  font-size: 0.8rem;
+}
+
+.area-top-list .top5-slider .rank-badge{
+  top: 12px;
+  left: 14px;
+}
+
 .top5-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

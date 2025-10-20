@@ -10,11 +10,11 @@ import { getAllPayments } from "../../api/payment/paymentApi";
 import { getPurchaseOrders } from "../../api/purchaseOrder/purchaseOrderApi";
 import { getStockTransactions } from "../../api/stock/transactionApi";
 
-import DashboardTopList from "./dashboard/DashboardTopList";
 import DashboardKpiRow, { KpiCardItem } from "./dashboard/DashboardKpiRow";
 import DashboardPieChartCard from "./dashboard/DashboardPieChartCard";
 import DashboardLineChartCard from "./dashboard/DashboardLineChartCard";
 import DashboardTimeline from "./dashboard/DashboardTimeline";
+import TopProductsSlider from "./TopProductsSlider";
 
 type RangeKey = "daily" | "weekly" | "monthly";
 
@@ -40,6 +40,14 @@ type StockTimelineEntry = {
   reference?: string;
   productName: string;
   quantity: number;
+};
+
+type TopSliderItem = {
+  rank: number;
+  name: string;
+  quantity?: number;
+  revenue?: number;
+  imageUrl?: string;
 };
 
 const COLORS = ["#6C5CE7", "#00C49F", "#FFA62B", "#FF6B6B", "#845EC2", "#2D9CDB", "#F97316"]; // used in charts
@@ -244,13 +252,19 @@ export default function Dashboard() {
   const summary = summaryData?.summary?.[filter] || {};
   const changes = summaryData?.changes?.[filter] || {};
 
-  const topProducts = useMemo(() => {
+  const topProducts = useMemo<TopSliderItem[]>(() => {
     const base = summaryData?.topProducts?.[filter] || [];
     return base.slice(0, 5).map((item: any, idx: number) => ({
       rank: idx + 1,
       name: item?.name || item?.productName || "-",
       quantity: sanitizeNumber(item?.quantity),
       revenue: sanitizeNumber(item?.netRevenue ?? item?.revenue),
+      imageUrl:
+        item?.imageUrl ||
+        item?.productImage ||
+        item?.thumbnail ||
+        item?.image ||
+        item?.picture,
     }));
   }, [summaryData, filter]);
 
@@ -520,11 +534,18 @@ export default function Dashboard() {
       <div className="dashboard-grid">
         <section className="dashboard-card area-top-list">
           <h2>สินค้าขายดี Top 5</h2>
-          <DashboardTopList
-            items={topProducts}
-            loading={loading}
-            emptyMessage="ยังไม่มีข้อมูลสินค้าขายดีในช่วงนี้"
-          />
+          {loading ? (
+            <p className="empty-state">กำลังโหลดรายการสินค้า...</p>
+          ) : topProducts.length === 0 ? (
+            <p className="empty-state">ยังไม่มีข้อมูลสินค้าขายดีในช่วงนี้</p>
+          ) : (
+            <TopProductsSlider
+              items={topProducts}
+              width={190}
+              height={130}
+              className="dashboard-top-slider"
+            />
+          )}
         </section>
 
         <section className="dashboard-card area-kpis">
