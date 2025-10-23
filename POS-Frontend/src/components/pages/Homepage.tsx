@@ -808,7 +808,8 @@ export default function HomePage() {
 
   // ====== UI ======
   return (
-    <div className="display home-gradient">
+    <div className="display">
+      <div className="home-gradient">
       <div className="dashboard-overview">
         <div className="dash-grid">
           {/* Top 5 */}
@@ -1020,6 +1021,7 @@ export default function HomePage() {
           </section>
         </div>
       </div>
+    </div>
     </div>
   );
 }

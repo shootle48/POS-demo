@@ -51,7 +51,7 @@
   margin-top: 80px;
 }
 .home-gradient{
-  min-height: 100vh;
+  margin-left: 1.2em;
   padding: 2rem 0 3rem;
   background:
     radial-gradient(115% 85% at 5% -10%, rgba(244, 114, 182, 0.28), transparent 62%),
@@ -63,8 +63,6 @@
 
 .dashboard-overview{
   position: relative;
-  max-width: var(--container-width);
-  margin: 0 auto;
   padding: 1.6rem 1.8rem 2rem;
   display: flex;
   flex-direction: column;
@@ -115,7 +113,7 @@
 
 .section-title{
   font-weight:700;
-  font-size:1.08rem;
+  font-size:1.2rem;
   margin-bottom:.7rem;
   color:#0f172a;
   display:flex;
