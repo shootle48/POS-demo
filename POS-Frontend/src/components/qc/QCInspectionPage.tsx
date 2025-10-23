@@ -4,13 +4,13 @@ import { getPurchaseOrderById } from "../../api/purchaseOrder/purchaseOrderApi";
 import {
     createQCRecord,
     getQCByBatch,
-    updateQCRecord,
     updateQCStatus,
 } from "../../api/purchaseOrder/qcApi";
 import "../../styles/qc/QCInspectionPage.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCheck, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck } from "@fortawesome/free-solid-svg-icons";
 import GlobalPopup from "../layout/GlobalPopup";
+import QCTable from "./QCTable";
 
 const QCInspectionPage: React.FC = () => {
     const { poId } = useParams<{ poId: string }>();
@@ -22,14 +22,12 @@ const QCInspectionPage: React.FC = () => {
     const [files, setFiles] = useState<Record<string, File[]>>({});
     const [saving, setSaving] = useState(false);
 
-    // ✅ popup กลาง
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState("");
     const [popupSuccess, setPopupSuccess] = useState(true);
+    const [popupLocked, setPopupLocked] = useState(false);
 
-    /* =========================================================
-       โหลดข้อมูล PO + QC เดิม
-    ========================================================= */
+    // ✅ โหลดข้อมูล PO และ QC ที่บันทึกไว้
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -62,55 +60,50 @@ const QCInspectionPage: React.FC = () => {
         loadData();
     }, [poId]);
 
-    /* =========================================================
-       ตรวจว่าทุกล็อตผ่าน QC หรือยัง
-    ========================================================= */
-    const allLotsPassed = po?.items?.every((item: any) => {
-        const qc = qcData[item.batchNumber];
-        return qc && qc.status === "ผ่าน";
-    });
-
-    const allQCChecked = po?.items?.every((item: any) => {
-        const qc = qcData[item.batchNumber];
-        return qc && qc.status && qc.status !== "รอตรวจสอบ";
-    });
-
-    /* =========================================================
-       บันทึกผล QC รายล็อต
-    ========================================================= */
+    // ✅ บันทึก QC ต่อแถว
     const handleSubmitQC = async (item: any) => {
         const batchNumber = item.batchNumber;
         const current = qcData[batchNumber] || {};
         const token = localStorage.getItem("token") || "";
         if (!batchNumber) return;
 
+        // ✅ ตรวจว่ากรอกวันหมดอายุหรือยัง (ถ้าเลือกผ่าน)
+        if (current.status === "ผ่าน" && !current.expiryDate) {
+            setPopupMessage(`⚠️ กรุณากรอกวันหมดอายุของ ${item.productName} ก่อนบันทึก`);
+            setPopupSuccess(false);
+            setShowPopup(true);
+            return;
+        }
+
         setSaving(true);
         try {
-            let res;
-            if (current._id) {
-                res = await updateQCRecord(
-                    current._id,
-                    { status: current.status, remarks: current.remarks },
-                    token
-                );
+            const formData = new FormData();
+            formData.append("batchNumber", batchNumber);
+            formData.append("productId", item.productId?._id || item.productId || "");
+            formData.append("supplierId", po.supplierId?._id || po.supplierId || "");
+            formData.append("warehouseId", po.location?._id || po.location || "");
+            formData.append("status", current.status || "รอตรวจสอบ");
+            formData.append("remarks", current.remarks || "");
+
+            // ✅ เพิ่มวันหมดอายุทุกครั้ง (ถ้ามี)
+            if (current.expiryDate) {
+                formData.append("expiryDate", current.expiryDate);
             } else {
-                const formData = new FormData();
-                formData.append("batchNumber", batchNumber);
-                formData.append("productId", item.productId?._id || item.productId || "");
-                formData.append("supplierId", po.supplierId?._id || po.supplierId || "");
-                formData.append("warehouseId", po.location?._id || po.location || "");
-                formData.append("status", current.status || "รอตรวจสอบ");
-                formData.append("remarks", current.remarks || "");
-                (files[batchNumber] || []).forEach((file) =>
-                    formData.append("attachments", file)
-                );
-                res = await createQCRecord(formData, token);
+                formData.append("expiryDate", ""); // ป้องกัน undefined
             }
+
+            // ✅ แนบไฟล์แนบ (attachments)
+            (files[batchNumber] || []).forEach((file) =>
+                formData.append("attachments", file)
+            );
+
+            const res = await createQCRecord(formData, token);
 
             if (res.success) {
                 setPopupMessage(`✅ บันทึกผล QC สำหรับ ${item.productName} สำเร็จ`);
                 setPopupSuccess(true);
                 setShowPopup(true);
+                setPopupLocked(true);
 
                 const updated = await getQCByBatch(batchNumber, token);
                 if (updated.success && updated.data.length > 0) {
@@ -133,17 +126,34 @@ const QCInspectionPage: React.FC = () => {
         }
     };
 
-    /* =========================================================
-       ✅ สรุป QC และเติมสต็อก
-    ========================================================= */
+
+    // ✅ สรุป QC ทั้งใบ
     const handleSubmitFinalQC = async () => {
         const token = localStorage.getItem("token") || "";
         setSaving(true);
-
         try {
-            // ✅ ตรวจว่ามีข้อมูล QC ของแต่ละล็อตหรือยัง
             if (!po?.items?.length) return;
 
+            // ✅ ตรวจว่าสินค้าผ่านแต่ยังไม่ใส่วันหมดอายุ (เช็คจาก qcData ที่มี expiryDate จริงจาก backend)
+            const missingExpiry: string[] = [];
+            po.items.forEach((item: any) => {
+                const qc = qcData[item.batchNumber];
+                if (qc?.status === "ผ่าน" && (!qc?.expiryDate || qc.expiryDate === null)) {
+                    missingExpiry.push(item.productName || qc?.productId?.name || "ไม่ทราบชื่อสินค้า");
+                }
+            });
+
+            if (missingExpiry.length > 0) {
+                setPopupMessage(
+                    `⚠️ สินค้าต่อไปนี้ยังไม่ได้กรอกวันหมดอายุ:\n${missingExpiry.join("\n")}`
+                );
+                setPopupSuccess(false);
+                setShowPopup(true);
+                setSaving(false);
+                return;
+            }
+
+            // ✅ นับจำนวนแต่ละสถานะ
             const total = po.items.length;
             let passed = 0;
             let failed = 0;
@@ -164,9 +174,8 @@ const QCInspectionPage: React.FC = () => {
                 return;
             }
 
-            // ✅ เรียก backend เพื่อให้คำนวณสถานะรวมเอง
+            // ✅ อัปเดตสถานะ QC ของ PO
             const res = await updateQCStatus(poId!, { qcStatus: "ผ่าน" }, token);
-
             if (res.success) {
                 setPopupMessage(
                     `✅ สรุป QC สำเร็จ (${passed} ผ่าน / ${failed} ไม่ผ่าน / ${pending} รอตรวจสอบ)`
@@ -174,18 +183,21 @@ const QCInspectionPage: React.FC = () => {
                 setPopupSuccess(true);
                 setShowPopup(true);
 
-                // ✅ โหลดข้อมูล PO ใหม่ (สถานะจะอัปเดตแล้ว)
+                // ✅ โหลดข้อมูล PO ล่าสุด
                 const updatedPO = await getPurchaseOrderById(poId!, token);
                 setPo(updatedPO.data);
 
-                setTimeout(() => navigate("/purchase-orders"), 1500);
+                // ✅ Redirect หลังจาก popup
+                setTimeout(() => {
+                    window.location.href = "/purchase-orders";
+                }, 1500);
             } else {
                 setPopupMessage("❌ ไม่สามารถสรุป QC ได้");
                 setPopupSuccess(false);
                 setShowPopup(true);
             }
         } catch (error) {
-            console.error(error);
+            console.error("❌ handleSubmitFinalQC Error:", error);
             setPopupMessage("⚠️ เกิดข้อผิดพลาดในการสรุป QC");
             setPopupSuccess(false);
             setShowPopup(true);
@@ -194,12 +206,11 @@ const QCInspectionPage: React.FC = () => {
         }
     };
 
-
-    /* =========================================================
-       ✅ Rendering
-    ========================================================= */
     if (loading) return <p className="qc-loading">⏳ กำลังโหลดข้อมูล...</p>;
     if (!po) return <p className="qc-error">ไม่พบข้อมูลใบสั่งซื้อ</p>;
+
+    const isFinalized =
+        po.qcStatus === "ผ่าน" || po.qcStatus === "ไม่ผ่าน" || po.qcStatus === "สรุปแล้ว";
 
     return (
         <div className="display">
@@ -215,123 +226,38 @@ const QCInspectionPage: React.FC = () => {
                     </button>
                 </div>
 
-                <table className="qc-table">
-                    <thead>
-                        <tr>
-                            <th>สินค้า</th>
-                            <th>Batch</th>
-                            <th>สถานะ QC</th>
-                            <th>หมายเหตุ</th>
-                            <th>แนบรูป</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {po.items.map((item: any, idx: number) => {
-                            const batchNumber = item.batchNumber;
-                            const qc = qcData[batchNumber] || {};
+                {/* ✅ ตาราง QC */}
+                <QCTable
+                    po={po}
+                    qcData={qcData}
+                    setQcData={setQcData}
+                    files={files}
+                    setFiles={setFiles}
+                    saving={saving}
+                    isFinalized={isFinalized}
+                    handleSubmitQC={handleSubmitQC}
+                />
 
-                            return (
-                                <tr key={idx}>
-                                    <td>{item.productName}</td>
-                                    <td>{batchNumber}</td>
-                                    <td>
-                                        <select
-                                            value={qc.status || "รอตรวจสอบ"}
-                                            onChange={(e) =>
-                                                setQcData({
-                                                    ...qcData,
-                                                    [batchNumber]: {
-                                                        ...qc,
-                                                        status: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                        >
-                                            <option value="รอตรวจสอบ">รอตรวจสอบ</option>
-                                            <option value="ผ่าน">ผ่าน</option>
-                                            <option value="ไม่ผ่าน">ไม่ผ่าน</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            placeholder="หมายเหตุ..."
-                                            value={qc.remarks || ""}
-                                            onChange={(e) =>
-                                                setQcData({
-                                                    ...qcData,
-                                                    [batchNumber]: {
-                                                        ...qc,
-                                                        remarks: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                        />
-                                    </td>
-                                    <td>
-                                        <label className="qc-upload-label">
-                                            <FontAwesomeIcon icon={faUpload} /> เลือกรูป
-                                            <input
-                                                type="file"
-                                                multiple
-                                                hidden
-                                                onChange={(e) =>
-                                                    setFiles({
-                                                        ...files,
-                                                        [batchNumber]: Array.from(e.target.files || []),
-                                                    })
-                                                }
-                                            />
-                                        </label>
-                                        {files[batchNumber]?.length > 0 && (
-                                            <p className="qc-file-count">
-                                                📎 {files[batchNumber].length} ไฟล์
-                                            </p>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="qc-save-btn"
-                                            disabled={saving}
-                                            onClick={() => handleSubmitQC(item)}
-                                        >
-                                            <FontAwesomeIcon icon={faCheck} /> บันทึก
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-
+                {/* ✅ ปุ่มสรุป QC */}
                 <div className="qc-finalize-section">
                     <button
-                        className={`qc-submit-btn ${saving ? "disabled" : "active"}`}
-                        disabled={saving}
+                        className={`qc-submit-btn ${saving || isFinalized || popupLocked ? "disabled" : "active"
+                            }`}
+                        disabled={saving || isFinalized || popupLocked}
                         onClick={handleSubmitFinalQC}
                     >
                         <FontAwesomeIcon icon={faCheck} /> สรุปผลการตรวจสอบสินค้า
                     </button>
-
-                    {po.items.some(
-                        (item: any) =>
-                            !qcData[item.batchNumber] ||
-                            qcData[item.batchNumber].status === "รอตรวจสอบ"
-                    ) && (
-                            <p className="qc-hint">
-                                ⚠️ มีสินค้าที่ยังไม่ได้ตรวจ QC ระบบจะเติมสต็อกเฉพาะสินค้าที่ “ผ่าน” เท่านั้น
-                            </p>
-                        )}
                 </div>
-
-
 
                 <GlobalPopup
                     message={popupMessage}
                     isSuccess={popupSuccess}
                     show={showPopup}
-                    setShow={setShowPopup}
+                    setShow={(val) => {
+                        setShowPopup(val);
+                        if (!val) setPopupLocked(false);
+                    }}
                 />
             </div>
         </div>

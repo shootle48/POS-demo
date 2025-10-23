@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-    getPurchaseOrders,
-
-} from "../../api/purchaseOrder/purchaseOrderApi";
+import { getPurchaseOrders } from "../../api/purchaseOrder/purchaseOrderApi";
 import PurchaseOrderCard from "./PurchaseOrderCard";
 import PurchaseOrderPopup from "./PurchaseOrderPopup";
 import "../../styles/purchaseOrder/PurchaseOrderPage.css";
@@ -20,18 +17,27 @@ interface PurchaseOrder {
     invoiceNumber?: string;
 }
 
+interface PopupState {
+    type: "success" | "error" | "confirm" | null;
+    message: string;
+    onConfirm?: () => void;
+}
+
 const PurchaseOrderPage: React.FC = () => {
     const [orders, setOrders] = useState<PurchaseOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [popup, setPopup] = useState<any>(null);
+    const [popup, setPopup] = useState<PopupState | null>(null);
 
     const loadOrders = async () => {
         try {
             const token = localStorage.getItem("token") || "";
             const res = await getPurchaseOrders(token);
-            if (res.success) setOrders(res.data);
-            else setError(res.message);
+            if (res.success) {
+                setOrders(res.data);
+            } else {
+                setError(res.message || "ไม่สามารถโหลดข้อมูลใบสั่งซื้อได้");
+            }
         } catch {
             setError("เกิดข้อผิดพลาดในการโหลด Purchase Orders");
         } finally {
@@ -50,8 +56,9 @@ const PurchaseOrderPage: React.FC = () => {
         <div className="display">
             <div className="po-container">
                 <div className="po-header-wrapper">
-                <h1 className="po-header">📦 รายการใบสั่งซื้อสินค้า</h1>
+                    <h1 className="po-header">📦 รายการใบสั่งซื้อสินค้า</h1>
                 </div>
+
                 {orders.length === 0 ? (
                     <p className="po-empty">ยังไม่มีข้อมูลใบสั่งซื้อ</p>
                 ) : (
@@ -70,7 +77,7 @@ const PurchaseOrderPage: React.FC = () => {
 
             {popup && (
                 <PurchaseOrderPopup
-                    type={popup.type}
+                    type={popup.type!}
                     message={popup.message}
                     onClose={() => setPopup(null)}
                     onConfirm={popup.onConfirm}

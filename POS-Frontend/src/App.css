@@ -56,6 +56,16 @@ body {
 }
 /* ปกติ cart จะซ่อน */
 
+.app-container.sidebar-closed .stocklot-container {
+  margin-left: 50px;
+  transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+}
+
+.app-container.sidebar-open .stocklot-container {
+  margin-left: 50px;
+  transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+}
+
 .app-container.sidebar-closed .search-grid {
   margin-left: -200px;
   transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;

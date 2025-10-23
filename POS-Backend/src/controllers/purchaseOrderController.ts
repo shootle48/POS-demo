@@ -35,7 +35,7 @@ export const getPurchaseOrders = async (_: Request, res: Response): Promise<void
             .populate("updatedBy")
             .populate("items.productId", "name barcode")
             .populate("items.stockId")
-            .populate("stockLots", "_id batchNumber status qcStatus")
+            .populate("stockLots", "_id batchNumber status qcStatus expiryDate")
 
             .sort({ createdAt: -1 });
 
@@ -96,7 +96,7 @@ export const getAllPurchaseOrders = async (req: Request, res: Response): Promise
         const purchaseOrders = await PurchaseOrder.find()
             .populate("supplierId", "companyName")
             .populate("location", "name code") // คลังสินค้า
-            .populate("stockLots", "_id status qcStatus") // ✅ ดึงเฉพาะ field ที่จำเป็น
+            .populate("stockLots", "_id status qcStatus expiryDate") // ✅ ดึงเฉพาะ field ที่จำเป็น
             .sort({ createdAt: -1 })
             .lean();
 
@@ -329,8 +329,8 @@ export const confirmPurchaseOrder = async (req: Request, res: Response): Promise
 
 
 /* ========================================================
-   🔁 RETURN PURCHASE ORDER
-   → สำหรับกรณี QC ไม่ผ่าน
+   🔁 RETURN PURCHASE ORDER (FULL RETURN)
+   → ใช้ตอน QC ไม่ผ่าน และผู้ใช้กดคืนทั้งใบ (คืนเฉพาะที่ไม่ผ่าน)
 ======================================================== */
 export const returnPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -353,43 +353,247 @@ export const returnPurchaseOrder = async (req: Request, res: Response): Promise<
             return;
         }
 
-        if (po.status !== "ไม่ผ่าน QC - รอส่งคืนสินค้า") {
-            res.status(400).json({ success: false, message: "PO นี้ไม่สามารถคืนสินค้าได้" });
+        // ✅ ตรวจสอบว่าสถานะสามารถคืนได้หรือไม่
+        if (
+            ![
+                "ไม่ผ่าน QC - รอส่งคืนสินค้า",
+                "QC ผ่านบางส่วน",
+                "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว",
+            ].includes(po.status)
+        ) {
+            res
+                .status(400)
+                .json({ success: false, message: `PO นี้ไม่สามารถคืนสินค้าได้ (${po.status})` });
             return;
         }
 
-        for (const item of po.items as any[]) {
-            const lot = await StockLot.findById(item.stockLotId);
-            if (!lot) continue;
+        // ✅ ดึง StockLots ที่เกี่ยวข้อง
+        const lots = await StockLot.find({ batchNumber: { $in: po.items.map((i: any) => i.batchNumber) } });
 
+        let totalReturnedValue = 0;
+        const returnHistory: any[] = [];
+
+        for (const item of po.items as any[]) {
+            const lot = lots.find((l) => l.batchNumber === item.batchNumber);
+
+            // 🔍 คืนเฉพาะล็อตที่ "ไม่ผ่าน" เท่านั้น
+            if (!lot || lot.qcStatus !== "ไม่ผ่าน") continue;
+
+            const quantity = item.quantity;
+            const value = quantity * (item.costPrice || 0);
+            totalReturnedValue += value;
+
+            // ✅ Mark คืนในรายการสินค้า
+            item.isReturned = true;
+            item.returnedQuantity = quantity;
+            item.returnedValue = value;
+
+            // ✅ Log ประวัติการคืน
+            returnHistory.push({
+                productId: item.productId,
+                productName: item.productName,
+                batchNumber: item.batchNumber,
+                returnedQuantity: quantity,
+                returnedValue: value,
+                returnedAt: new Date(),
+                processedBy: (decoded as any).userId,
+            });
+
+            // ✅ อัปเดตสถานะล็อต
             lot.status = "รอคัดออก";
             lot.isActive = false;
             lot.isTemporary = true;
             await lot.save();
-
-            await StockTransaction.create({
-                stockId: lot.stockId,
-                productId: lot.productId,
-                stockLotId: lot._id,
-                type: "RETURN",
-                quantity: item.quantity,
-                costPrice: item.costPrice,
-                userId: decoded.userId,
-                notes: `คืนสินค้า | PO ${po.purchaseOrderNumber} | Batch ${lot.batchNumber}`,
-            });
         }
 
-        po.status = "ไม่ผ่าน QC - คืนสินค้าแล้ว";
+        // ✅ อัปเดตยอดรวมหลังคืน
+        const totalAmount = po.items.reduce(
+            (sum: number, i: any) => sum + (i.total || 0),
+            0
+        );
+        po.totalReturnedValue = totalReturnedValue;
+        po.totalAmountAfterReturn = totalAmount - totalReturnedValue;
+
+        // ✅ เก็บประวัติการคืน
+        if (!(po as any).returnHistory) (po as any).returnHistory = [];
+        po.returnHistory.push(...returnHistory);
+
+        // ✅ ตรวจสอบว่าคืนครบทุก “ล็อตที่ไม่ผ่าน” แล้วหรือไม่
+        const allFailLotsReturned = lots
+            .filter((l) => l.qcStatus === "ไม่ผ่าน")
+            .every((l) => l.isActive === false);
+
+        // ✅ อัปเดตสถานะ PO
+        po.status = allFailLotsReturned
+            ? "ไม่ผ่าน QC - คืนสินค้าแล้ว"
+            : "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว";
+
         po.returnedAt = new Date();
         po.updatedBy = (decoded as any).userId;
+
+        po.markModified("items");
         await po.save();
 
-        res.status(200).json({ success: true, message: "คืนสินค้าเรียบร้อย ✅", data: po });
+        res.status(200).json({
+            success: true,
+            message: `✅ คืนสินค้าทั้งใบเรียบร้อยแล้ว (คืนเฉพาะที่ QC ไม่ผ่าน, รวม ${returnHistory.length} รายการ, มูลค่า ${totalReturnedValue.toLocaleString()}฿)`,
+            data: {
+                poId: po._id,
+                status: po.status,
+                totalReturnedValue,
+                totalAmountAfterReturn: po.totalAmountAfterReturn,
+                returnHistory: po.returnHistory,
+            },
+        });
     } catch (error) {
         console.error("❌ Return PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while returning PO" });
+        res.status(500).json({
+            success: false,
+            message: "เกิดข้อผิดพลาดขณะคืนสินค้า",
+            error: (error as Error).message,
+        });
     }
 };
+/* ========================================================
+   🔁 RETURN PURCHASE ORDER ITEM (ปรับปรุงพร้อมยอดคืน)
+======================================================== */
+export const returnPurchaseItem = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params; // PO ID
+        const { itemId, batchNumber, quantity } = req.body;
+
+        if ((!itemId && !batchNumber) || !quantity) {
+            res.status(400).json({ success: false, message: "กรุณาระบุ batchNumber หรือ itemId และ quantity" });
+            return;
+        }
+
+        const token = req.header("Authorization")?.split(" ")[1];
+        if (!token) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
+
+        const decoded = verifyToken(token);
+        if (typeof decoded === "string" || !("userId" in decoded)) {
+            res.status(401).json({ success: false, message: "Invalid token" });
+            return;
+        }
+
+        const po = await PurchaseOrder.findById(id);
+        if (!po) {
+            res.status(404).json({ success: false, message: "ไม่พบใบสั่งซื้อ" });
+            return;
+        }
+
+        // ✅ ค้นหา item ตาม batchNumber หรือ itemId
+        const item = (po.items as any[]).find(
+            (i) =>
+                i._id?.toString() === itemId ||
+                i.batchNumber === batchNumber ||
+                i.barcode === batchNumber
+        );
+
+        if (!item) {
+            res.status(404).json({ success: false, message: "ไม่พบสินค้าที่ต้องการคืน" });
+            return;
+        }
+
+        if (quantity > item.quantity) {
+            res.status(400).json({ success: false, message: "จำนวนที่คืนมากกว่าที่รับไว้" });
+            return;
+        }
+
+        /* ======================================================
+           ✅ บันทึกข้อมูลการคืนสินค้า
+        ====================================================== */
+        const returnValue = quantity * item.costPrice; // มูลค่าที่คืน
+        item.isReturned = true;
+        item.returnedQuantity = quantity;
+        item.returnedValue = returnValue;
+
+        // ✅ เพิ่ม log การคืนสินค้า (เก็บไว้ใน purchaseOrder)
+        if (!(po as any).returnHistory) (po as any).returnHistory = [];
+        (po as any).returnHistory.push({
+            productId: item.productId,
+            productName: item.productName,
+            batchNumber: item.batchNumber,
+            returnedQuantity: quantity,
+            returnedValue: returnValue,
+            returnedAt: new Date(),
+            processedBy: (decoded as any).userId,
+        });
+
+        /* ======================================================
+           ✅ อัปเดตสถานะ StockLot
+        ====================================================== */
+        const lot = await StockLot.findOne({ batchNumber: item.batchNumber });
+        if (lot) {
+            lot.status = "รอคัดออก";
+            lot.isActive = false;
+            await lot.save();
+        }
+
+        /* ======================================================
+           ✅ อัปเดตยอดรวมในใบ PO
+        ====================================================== */
+        const totalReturnedValue = (po.items as any[])
+            .filter((i: any) => i.isReturned)
+            .reduce((sum: number, i: any) => sum + (i.returnedValue || 0), 0);
+
+        const newTotalAmount = po.items.reduce(
+            (sum: number, i: any) => sum + (i.total || 0),
+            0
+        );
+
+        po.totalReturnedValue = totalReturnedValue;
+        po.totalAmountAfterReturn = newTotalAmount - totalReturnedValue;
+        po.returnedAt = new Date();
+        po.updatedBy = (decoded as any).userId;
+
+        // ✅ เช็กสถานะว่าคืนครบทุกชิ้นแล้วไหม
+        const allReturned = po.items.every((i: any) => i.isReturned === true);
+        po.status = allReturned
+            ? "ไม่ผ่าน QC - คืนสินค้าทั้งหมดแล้ว"
+            : "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว";
+
+        // ✅ แจ้ง Mongoose ว่า array items ถูกแก้ไข
+        po.markModified("items");
+        await po.save();
+
+        /* ======================================================
+           ✅ Response กลับพร้อมข้อมูลครบทุกชิ้น
+        ====================================================== */
+        res.status(200).json({
+            success: true,
+            message: `✅ คืนสินค้า "${item.productName}" (${quantity} ชิ้น, มูลค่า ${returnValue.toLocaleString()}฿) สำเร็จแล้ว`,
+            data: {
+                poId: po._id,
+                items: po.items.map((i: any) => ({
+                    productName: i.productName,
+                    barcode: i.barcode,
+                    quantity: i.quantity,
+                    isReturned: i.isReturned,
+                    returnedQuantity: i.returnedQuantity,
+                    returnedValue: i.returnedValue,
+                    costPrice: i.costPrice,
+                    batchNumber: i.batchNumber,
+                })),
+                totalReturnedValue,
+                totalAmountAfterReturn: po.totalAmountAfterReturn,
+                updatedStatus: po.status,
+                returnHistory: po.returnHistory,
+            },
+        });
+    } catch (error) {
+        console.error("❌ Return Partial Item Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "เกิดข้อผิดพลาดขณะคืนสินค้า",
+            error: (error as Error).message,
+        });
+    }
+};
+
 
 /* ========================================================
    ❌ CANCEL PURCHASE ORDER

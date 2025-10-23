@@ -406,6 +406,26 @@
     color: #fff;
 }
 
+.return-btn {
+    background: linear-gradient(135deg, #ff5858, #ff7b7b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.return-btn:hover {
+    background: linear-gradient(135deg, #ff3b3b, #ff6666);
+    transform: scale(1.05);
+}
+
+.return-disabled {
+    color: #aaa;
+    font-size: 0.9rem;
+}
 /* ===============================
    🟢 Status Badge
 =================================*/
@@ -462,7 +482,11 @@
     color: #92400e;
     border: 1px solid #facc15;
 }
-
+.status-qc-partial{
+        background: #fef9c3;
+            color: #92400e;
+            border: 1px solid #facc15;
+}
 /* ⏳ รอตรวจ */
 
 /* Cancel (แดง) */

@@ -77,17 +77,36 @@ io.on("connection", (socket) => {
 });
 
 // Watch changes in Stock collection (Real-time)
+// 🧠 ตัว cache สำหรับกันยิงซ้ำ
+const stockEmitCache = new Map();
+
 mongoose.connection.once("open", () => {
   console.log("✅ MongoDB connected — watching stock changes...");
-  const changeStream = StockModel.watch();
+  const changeStream = StockModel.watch([], { fullDocument: "updateLookup" });
 
   changeStream.on("change", async (change) => {
-    if (["update", "replace", "insert"].includes(change.operationType)) {
-      const updatedDoc = await StockModel.findById(change.documentKey._id).populate("productId");
-      if (updatedDoc) {
-        console.log(`📦 Stock Updated: ${updatedDoc.productId?.name || updatedDoc.barcode}`);
-        io.emit("stockUpdated", updatedDoc); // 🔥 ส่ง event ให้ frontend
-      }
+    if (!["update", "replace", "insert"].includes(change.operationType)) return;
+
+    const updatedDoc = change.fullDocument;
+    if (!updatedDoc) return;
+
+    const stockId = updatedDoc._id.toString();
+    const lastEmit = stockEmitCache.get(stockId) || 0;
+    const now = Date.now();
+
+    // ⏳ ป้องกันยิงซ้ำภายใน 1 วินาที
+    if (now - lastEmit < 1000) {
+      return; // ข้ามรอบซ้ำ
+    }
+
+    stockEmitCache.set(stockId, now);
+
+    // ✅ populate ข้อมูล product ให้ครบ
+    const populated = await StockModel.findById(stockId).populate("productId");
+
+    if (populated) {
+      console.log(`📦 Stock Updated: ${populated.productId?.name || populated.barcode}`);
+      io.emit("stockUpdated", populated);
     }
   });
 });

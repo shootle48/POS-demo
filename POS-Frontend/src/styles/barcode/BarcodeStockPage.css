@@ -86,7 +86,6 @@
    Grid (แทน Table)
 =========================== */
 .barcode-grid {
-    flex: 1;
     overflow-y: auto;
     margin-top: 12px;
     display: grid;

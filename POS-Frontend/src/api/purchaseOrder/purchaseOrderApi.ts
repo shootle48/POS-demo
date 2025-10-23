@@ -132,6 +132,24 @@ export const returnPurchaseOrder = async (id: string, token: string) => {
     }
 };
 
+// purchaseOrderApi.ts
+export const returnPurchaseItem = async (poId: string, batchNumber: string, quantity: number, token: string) => {
+    try {
+        const res = await fetch(`${API_BASE_URL}/purchase-orders/${poId}/return-item`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ batchNumber, quantity }),
+        });
+        return await res.json();
+    } catch (err) {
+        return { success: false, message: "ไม่สามารถคืนสินค้าได้" };
+    }
+};
+
+
 /* =========================================================
    ❌ CANCEL PURCHASE ORDER
 ========================================================= */

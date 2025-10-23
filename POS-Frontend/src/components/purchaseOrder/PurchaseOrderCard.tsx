@@ -1,77 +1,78 @@
-import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faVial } from "@fortawesome/free-solid-svg-icons";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PurchaseOrderItemsTable from "./PurchaseOrderItemsTable";
 import PurchaseOrderActions from "./PurchaseOrderActions";
 import PurchaseOrderStatusBadge from "./PurchaseOrderStatusBadge";
-import { useNavigate } from "react-router-dom";
+import { returnPurchaseItem } from "../../api/purchaseOrder/purchaseOrderApi"; // ✅ import API
+
+interface PopupState {
+    type: "success" | "error" | "confirm" | null;
+    message: string;
+    onConfirm?: () => void;
+}
 
 interface PurchaseOrderCardProps {
     po: any;
     onActionComplete: () => void;
-    setPopup: (popup: any) => void;
+    setPopup: React.Dispatch<React.SetStateAction<PopupState | null>>;
 }
 
 const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ po, onActionComplete, setPopup }) => {
     const navigate = useNavigate();
+    const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
-    const formatThaiDateTime = (dateString: string) =>
-        new Date(dateString).toLocaleString("th-TH", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-            timeZone: "Asia/Bangkok",
-        }) + " น.";
+    const handleReturnItem = (item: any) => {
+        setSelectedItem(item);
+        setPopup({
+            type: "confirm",
+            message: `ต้องการคืนสินค้า "${item.productName}" ใช่ไหม?`,
+            onConfirm: () => handleConfirmReturn(item),
+        });
+    };
+    const handleConfirmReturn = async (item: any) => {
+        const token = localStorage.getItem("token") || "";
+        const quantity = item.quantity || 1;
 
-    const grandTotal = po.items.reduce((sum: number, i: any) => sum + i.costPrice * i.quantity, 0);
+        setPopup({
+            type: "success",
+            message: "⏳ กำลังดำเนินการคืนสินค้า...",
+        });
+
+        const res = await returnPurchaseItem(po._id, item.batchNumber, quantity, token); // ✅ ใช้ batchNumber แทน
+
+        if (res.success) {
+            setPopup({
+                type: "success",
+                message: res.message || `✅ คืนสินค้า "${item.productName}" สำเร็จแล้ว!`,
+            });
+            onActionComplete();
+        } else {
+            setPopup({
+                type: "error",
+                message: res.message || "❌ เกิดข้อผิดพลาดในการคืนสินค้า",
+            });
+        }
+    };
 
     return (
         <div className="po-card">
-            {/* Header */}
             <div className="po-card-header">
-                <div>
-                    <h2 className="po-number">{po.purchaseOrderNumber}</h2>
-                    <p className="po-date">📅 {formatThaiDateTime(po.orderDate)}</p>
-                </div>
+                <h2 className="po-number">{po.purchaseOrderNumber}</h2>
                 <PurchaseOrderStatusBadge status={po.status} />
-            </div>
-
-            {/* Info */}
-            <div className="po-info">
-                <p><strong>ผู้จัดส่ง:</strong> {po.supplierCompany}</p>
-                <p><strong>คลังสินค้า:</strong>{" "}
-                    {typeof po.location === "object"
-                        ? po.location.name || po.location.code || "-"
-                        : po.location}
-                </p>
-                <p>
-                    <strong>สถานะ QC:</strong>{" "}
-                    <span
-                        className={`qc-status-badge ${po.qcStatus === "ผ่าน"
-                                ? "qc-pass"
-                                : po.qcStatus === "ไม่ผ่าน"
-                                    ? "qc-fail"
-                                    : po.qcStatus === "QC ผ่านบางส่วน" || po.qcStatus === "ตรวจบางส่วน"
-                                        ? "qc-partial"
-                                        : "qc-pending"
-                            }`}
-                    >
-                        {po.qcStatus || "รอตรวจ"}
-                    </span>
-                </p>
-
             </div>
 
             <PurchaseOrderItemsTable
                 items={po.items}
                 stockLots={po.stockLots}
+                onReturnItem={handleReturnItem}
             />
-            <div className="po-total">💰 รวมทั้งหมด: {grandTotal.toLocaleString()} ฿</div>
 
-            <PurchaseOrderActions po={po} navigate={navigate} onActionComplete={onActionComplete} setPopup={setPopup} />
+            <PurchaseOrderActions
+                po={po}
+                navigate={navigate}
+                onActionComplete={onActionComplete}
+                setPopup={setPopup}
+            />
         </div>
     );
 };

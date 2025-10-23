@@ -218,7 +218,7 @@ const App: React.FC = () => {
             />
             <Route path="/stocks" element={<StockPage />} />
             <Route path="/stockTransaction" element={<StockTransaction />} />
-            <Route path="/createOrder" element={<CreateOrder />} />
+            <Route path="/create-purchase-order" element={<CreateOrder />} />
             <Route path="/expired" element={<ExpiredPage />} />
             <Route path="/barcode" element={<BarcodePage />} />
             <Route path="/discount" element={<DiscountPage />} />

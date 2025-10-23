@@ -12,7 +12,7 @@ export interface IStockLot extends Document {
     expiryDate?: Date;
     barcode: string;
     purchaseOrderId: mongoose.Types.ObjectId;
-    purchaseOrderNumber:string;
+    purchaseOrderNumber: string;
     quantity: number;
     costPrice: number;
     salePrice?: number;
@@ -23,6 +23,9 @@ export interface IStockLot extends Document {
     notes?: string;
     isActive: boolean;
     isTemporary?: boolean;
+
+    // ✅ เพิ่มฟิลด์นี้
+    isStocked?: boolean; // true = เติมแล้ว, false = ยังไม่เติม
 
     createdAt: Date;
     updatedAt: Date;
@@ -73,10 +76,12 @@ const StockLotSchema = new Schema<IStockLot>(
         notes: { type: String },
         isActive: { type: Boolean, default: false },
         isTemporary: { type: Boolean, default: true },
+
+        // ✅ ฟิลด์ใหม่ ใช้กันการเติมซ้ำ
+        isStocked: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
-
 
 // ✅ Method: อัปเดตสถานะอัตโนมัติ (เฉพาะ inventory)
 StockLotSchema.methods.updateStatus = async function () {
@@ -96,6 +101,7 @@ StockLotSchema.index({ batchNumber: 1 });
 StockLotSchema.index({ barcode: 1 });
 StockLotSchema.index({ status: 1 });
 StockLotSchema.index({ qcStatus: 1 });
+StockLotSchema.index({ isStocked: 1 });
 StockLotSchema.index({ updatedAt: -1 });
 
 export default mongoose.models.StockLot || mongoose.model<IStockLot>("StockLot", StockLotSchema);

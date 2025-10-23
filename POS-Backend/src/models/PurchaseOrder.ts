@@ -13,6 +13,8 @@ interface IPurchaseOrderItem {
     total: number;
     batchNumber?: string;
     expiryDate?: Date;
+    isReturned?: boolean; 
+    returnedQuantity?: number; 
 }
 
 /* ==========================
@@ -63,11 +65,14 @@ const PurchaseOrderItemSchema = new Schema<IPurchaseOrderItem>(
         barcode: { type: String },
         quantity: { type: Number, required: true },
         costPrice: { type: Number, required: true },
-        total: { type: Number, required: false },
+        total: { type: Number },
         batchNumber: { type: String },
         expiryDate: { type: Date },
+        // ✅ เพิ่มใหม่
+        isReturned: { type: Boolean, default: false },
+        returnedQuantity: { type: Number, default: 0 },
     },
-    { _id: false }
+    { timestamps: true }
 );
 
 /* ==========================
@@ -89,6 +94,7 @@ const PurchaseOrderSchema = new Schema<IPurchaseOrder>(
                 "QC ผ่านบางส่วน",
                 "ไม่ผ่าน QC - รอส่งคืนสินค้า",
                 "ไม่ผ่าน QC - คืนสินค้าแล้ว",
+                "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว",
                 "รอการโอนคลัง", 
                 "ยกเลิก",
             ],

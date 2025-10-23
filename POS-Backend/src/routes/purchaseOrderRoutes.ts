@@ -6,6 +6,7 @@ import {
     confirmPurchaseOrder,
     cancelPurchaseOrder,
     returnPurchaseOrder,
+    returnPurchaseItem
 } from "../controllers/purchaseOrderController";
 import { getAllPurchaseOrders } from "../controllers/purchaseOrderController";
 
@@ -26,5 +27,6 @@ router.patch("/purchase-orders/:id/confirm", confirmPurchaseOrder);
 // ยกเลิก PO
 router.patch("/purchase-orders/:id/cancel", cancelPurchaseOrder);
 router.patch("/purchase-orders/:id/returnPO", returnPurchaseOrder);
+router.post("/purchase-orders/:id/return-item", returnPurchaseItem);
 
 export default router;

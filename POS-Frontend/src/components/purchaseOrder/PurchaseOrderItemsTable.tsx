@@ -1,14 +1,28 @@
 import React from "react";
+import "../../styles/purchaseOrder/PurchaseOrderReturn.css";
 
 interface Props {
     items: any[];
-    stockLots: any[]; // ✅ รับ array ของ lot เข้ามาด้วย
+    stockLots: any[];
+    onReturnItem?: (item: any) => void;
 }
 
-const PurchaseOrderItemsTable: React.FC<Props> = ({ items, stockLots }) => {
+const PurchaseOrderItemsTable: React.FC<Props> = ({
+    items,
+    stockLots,
+    onReturnItem,
+}) => {
+    const getLotInfo = (batchNumber: string) =>
+        stockLots.find((lot) => lot.batchNumber === batchNumber);
+
     const getQCStatus = (batchNumber: string) => {
-        const lot = stockLots.find((lot) => lot.batchNumber === batchNumber);
+        const lot = getLotInfo(batchNumber);
         return lot?.qcStatus || "รอตรวจสอบ";
+    };
+
+    const getExpiryDate = (batchNumber: string) => {
+        const lot = getLotInfo(batchNumber);
+        return lot?.expiryDate ? new Date(lot.expiryDate).toLocaleDateString("th-TH") : "-";
     };
 
     const getQCClass = (status: string) => {
@@ -38,6 +52,7 @@ const PurchaseOrderItemsTable: React.FC<Props> = ({ items, stockLots }) => {
                         <th>ราคารวม</th>
                         <th>Batch</th>
                         <th>สถานะ QC</th>
+                        <th>การคืนสินค้า</th>
                         <th>วันหมดอายุ</th>
                     </tr>
                 </thead>
@@ -46,6 +61,7 @@ const PurchaseOrderItemsTable: React.FC<Props> = ({ items, stockLots }) => {
                         const total = item.costPrice * item.quantity;
                         const qcStatus = getQCStatus(item.batchNumber);
                         const qcClass = getQCClass(qcStatus);
+                        const isReturned = item.isReturned === true;
 
                         return (
                             <tr key={index}>
@@ -56,16 +72,31 @@ const PurchaseOrderItemsTable: React.FC<Props> = ({ items, stockLots }) => {
                                 <td className="po-total-cell">{total.toLocaleString()} ฿</td>
                                 <td>{item.batchNumber || "-"}</td>
                                 <td>
-                                    <span className={`qc-status ${getQCClass(getQCStatus(item.batchNumber))}`}>
-                                        {getQCStatus(item.batchNumber)}
-                                    </span>
+                                    <span className={`qc-status ${qcClass}`}>{qcStatus}</span>
                                 </td>
 
+                                {/* ✅ ปุ่มคืนสินค้า */}
                                 <td>
-                                    {item.expiryDate
-                                        ? new Date(item.expiryDate).toLocaleDateString("th-TH")
-                                        : "-"}
+                                    {qcStatus === "ไม่ผ่าน" ? (
+                                        isReturned ? (
+                                            <button className="return-btn-returned" disabled>
+                                                คืนแล้ว
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="return-btn"
+                                                onClick={() => onReturnItem?.(item)}
+                                            >
+                                                คืนสินค้า
+                                            </button>
+                                        )
+                                    ) : (
+                                        <span className="return-disabled">-</span>
+                                    )}
                                 </td>
+
+                                {/* ✅ แสดงวันหมดอายุจาก stockLots */}
+                                <td>{getExpiryDate(item.batchNumber)}</td>
                             </tr>
                         );
                     })}

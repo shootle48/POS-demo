@@ -248,3 +248,48 @@
         width: 100%;
     }
 }
+
+.qc-row-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.qc-upload-label.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.qc-save-btn.disabled,
+.qc-submit-btn.disabled {
+    background-color: #ccc !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.qc-save-btn.active,
+.qc-submit-btn.active {
+    background-color: #2ecc71;
+    color: white;
+    font-weight: 600;
+}
+.qc-save-btn.disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.qc-upload-label.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.qc-row-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+.qc-save-btn:hover:not(.disabled),
+.qc-submit-btn:hover:not(.disabled) {
+    background-color: #27ae60;
+}
+

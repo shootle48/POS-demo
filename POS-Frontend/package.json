@@ -15,7 +15,6 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@mui/material": "^7.1.1",
     "@react-oauth/google": "^0.12.1",
-    "@types/react-datepicker": "^6.2.0",
     "@zxing/library": "^0.21.3",
     "axios": "^1.7.9",
     "chart.js": "^4.4.7",
@@ -30,6 +29,7 @@
     "react-datepicker": "^8.7.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
+    "recharts": "^3.3.0",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {

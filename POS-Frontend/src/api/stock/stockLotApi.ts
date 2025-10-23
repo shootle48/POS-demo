@@ -30,7 +30,7 @@ export const getStockLotsByBarcode = async (barcode: string, token: string) => {
 /* ✅ อัปเดตวันหมดอายุ */
 export const updateExpiryDate = async (lotId: string, expiryDate: string, token: string) => {
     const res = await fetch(`${API_BASE_URL}/stocklots/${lotId}/expiry`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,

@@ -13,7 +13,7 @@ const router = express.Router();
 router.get("/", getStockLots);
 router.get("/barcode/:barcode", getStockLotsByBarcode);
 router.get("/filter", filterStockLots);
-router.put("/:lotId/expiry", updateExpiryDate);
+router.patch("/:lotId/expiry", updateExpiryDate);
 router.put("/:lotId/qc", updateQCStatus);
 router.put("/:lotId/deactivate", deactivateStockLot);
 

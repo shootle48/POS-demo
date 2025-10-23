@@ -1,7 +1,14 @@
+// src/components/page/NotificationDropdown.tsx
 import React, { useRef, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
-import { io } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
+import {
+    connectSocket,
+    onSocketEvent,
+    offSocketEvent,
+    disconnectSocket,
+} from "../../api/websocket/socketService";
 import { getStockData } from "../../api/stock/stock";
 import "../../styles/page/Notification.css";
 
@@ -37,8 +44,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     const notificationRef = useRef<HTMLDivElement>(null);
     const [lowStockItems, setLowStockItems] = useState<StockItem[]>([]);
     const [notificationCount, setNotificationCount] = useState(0);
+    const processedRef = useRef<Set<string>>(new Set());
+    const navigate = useNavigate();
 
-    // 🔧 helper: ทำให้ข้อมูล stock เป็นรูปแบบเดียวกันเสมอ
+    // ✅ ทำให้ข้อมูล stock อยู่ใน format เดียวกันเสมอ
     const normalizeStockItem = (raw: any): StockItem => ({
         _id: raw._id,
         barcode: raw.barcode ?? raw.productId?.barcode ?? "",
@@ -66,9 +75,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 : 5,
     });
 
-    const isLow = (item: StockItem) => item.totalQuantity <= (item.threshold ?? 5);
+    const isLow = (item: StockItem) =>
+        item.totalQuantity <= (item.threshold ?? 5);
 
-    // ✅ โหลด stock ครั้งแรก (normalize ก่อนใส่ state)
+    // ✅ โหลด stock ครั้งแรก
     const fetchStock = async () => {
         try {
             const token = localStorage.getItem("token");
@@ -76,54 +86,73 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
             const stock = await getStockData(token);
             const normalized: StockItem[] = (stock || []).map(normalizeStockItem);
-            setLowStockItems(normalized.filter(isLow));
+            const lowList = normalized.filter(isLow);
+
+            setLowStockItems(lowList);
+            setNotificationCount(lowList.length); // ✅ แสดงจำนวนสินค้าที่เหลือน้อยทั้งหมด
         } catch (err) {
             console.error("❌ โหลด stock ไม่สำเร็จ", err);
         }
     };
+
+    // ✅ Socket realtime update
     useEffect(() => {
-        if (notificationOpen) {
-            setNotificationCount(0);
-        }
-    }, [notificationOpen]);
+        const socket = connectSocket();
+        let ready = false;
 
-    // Socket.io realtime update (normalize ก่อนใช้งานเสมอ)
-    useEffect(() => {
-        const socket = io("http://localhost:8080", { transports: ["websocket"] });
-
-        socket.on("connect", () => {
-            console.log("✅ Connected to socket server");
-        });
-
-        socket.on("stockUpdated", (raw: any) => {
+        const handleStockUpdate = (raw: any) => {
             const updated = normalizeStockItem(raw);
-            console.log("⚡️ Stock updated realtime:", updated);
+            const id = updated._id;
+            const nowLow = isLow(updated);
+
+            if (!ready) return;
+            if (processedRef.current.has(id)) return;
+
+            processedRef.current.add(id);
+            setTimeout(() => processedRef.current.delete(id), 300);
 
             setLowStockItems((prev) => {
-                const exists = prev.some((i) => i._id === updated._id);
+                const exists = prev.some((i) => i._id === id);
 
-                // เข้าเงื่อนไขเหลือน้อยตอนนี้
-                if (isLow(updated)) {
-                    if (!exists) {
-                        // เพิ่ง “ตกเกณฑ์เหลือน้อย” → เพิ่มเข้า list + เพิ่ม badge
-                        setNotificationCount((c) => c + 1);
-                        return [...prev, updated];
-                    }
-                    // ยังคงเหลือน้อย → แค่อัปเดตรายการเดิม
-                    return prev.map((i) => (i._id === updated._id ? updated : i));
-                } else {
-                    // ไม่เหลือน้อยแล้ว → ถ้ามีอยู่ให้ลบออก
-                    if (exists) return prev.filter((i) => i._id !== updated._id);
-                    return prev; // ไม่อยู่ใน list อยู่แล้ว ก็ไม่ต้องทำอะไร
+                // 🆕 ถ้าสินค้าเพิ่งเหลือน้อยและยังไม่มีในรายการ → เพิ่มเข้า list
+                if (nowLow && !exists) {
+                    console.log("🔔 สินค้าเหลือน้อยใหม่:", updated.name);
+                    setNotificationCount((c) => c + 1);
+                    return [...prev, updated];
                 }
-            });
-        });
 
-        // โหลดรอบแรก
-        fetchStock();
+                // 🔁 ถ้ายังเหลือน้อยอยู่ → อัปเดตข้อมูล
+                if (nowLow && exists) {
+                    return prev.map((i) => (i._id === id ? updated : i));
+                }
+
+                // ✅ ถ้าสต็อกกลับมาปกติ → เอาออกจาก list (แต่ไม่ลด count ถ้ายังไม่ได้อยู่ใน prev)
+                if (!nowLow && exists) {
+                    console.log("✅ สินค้ากลับมาปกติ:", updated.name);
+
+                    // ป้องกัน double decrement: ลด count เฉพาะถ้ายังมีใน list จริง
+                    setNotificationCount((c) => {
+                        const stillHasItem = prev.some((x) => x._id === id);
+                        return stillHasItem ? Math.max(c - 1, 0) : c;
+                    });
+
+                    return prev.filter((i) => i._id !== id);
+                }
+
+                return prev;
+            });
+        };
+
+        onSocketEvent("stockUpdated", handleStockUpdate);
+
+        (async () => {
+            await fetchStock();
+            ready = true;
+        })();
 
         return () => {
-            socket.disconnect();
+            offSocketEvent("stockUpdated", handleStockUpdate);
+            disconnectSocket();
         };
     }, []);
 
@@ -131,7 +160,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
-            if (notificationRef.current && !notificationRef.current.contains(target)) {
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(target)
+            ) {
                 setNotificationOpen(false);
             }
         };
@@ -140,24 +172,36 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             document.removeEventListener("mousedown", handleClickOutside);
     }, [setNotificationOpen]);
 
+    // ✅ ไปหน้าสร้าง PO เมื่อกดที่สินค้าเหลือน้อย
+    const handleItemClick = (item: StockItem) => {
+        setNotificationOpen(false);
+        navigate("/create-purchase-order", {
+            state: {
+                fromNotification: true,
+                product: item,
+            },
+        });
+    };
+
     return (
-        <div
-            className="notification-dropdown"
-            ref={notificationRef}
-            onClick={() => setNotificationOpen(!notificationOpen)}
-        >
-            <div className="notification-wrapper">
+        <div className="notification-dropdown" ref={notificationRef}>
+            {/* 🔔 ไอคอนแจ้งเตือน */}
+            <div
+                className="notification-wrapper"
+                onClick={() => setNotificationOpen(!notificationOpen)}
+            >
                 <FontAwesomeIcon icon={faBell} className="icon notification-icon" />
                 {notificationCount > 0 && (
                     <span className="notification-length">{notificationCount}</span>
                 )}
-
             </div>
 
+            {/* 📜 รายการแจ้งเตือน */}
             {notificationOpen && (
-                <div className="notification-menu" onClick={(e) => e.stopPropagation()}>
-                    <p className="notification-item">🔔 การแจ้งเตือนใหม่</p>
-
+                <div
+                    className="notification-menu"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     {lowStockItems.length > 0 ? (
                         <>
                             <div
@@ -172,9 +216,13 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
                             {showLowStockList &&
                                 lowStockItems.map((item) => (
-                                    <p key={item._id} className="notification-item clickable">
+                                    <div
+                                        key={item._id}
+                                        className="notification-item hoverable"
+                                        onClick={() => handleItemClick(item)}
+                                    >
                                         • {item.name} เหลือ {item.totalQuantity} ชิ้น
-                                    </p>
+                                    </div>
                                 ))}
                         </>
                     ) : (
