@@ -32,6 +32,7 @@ type PurchaseOrderEntry = {
   createdAt?: string;
   items: any[];
   total: number;
+  stockLots: any[];
 };
 
 type StockTimelineEntry = {
@@ -102,16 +103,28 @@ const sanitizeNumber = (value: any) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
-const resolvePurchaseTotal = (po: PurchaseOrderEntry) => {
-  if (typeof po.total === "number" && !Number.isNaN(po.total)) {
-    return po.total;
+const resolveApprovedPurchaseTotal = (po: PurchaseOrderEntry) => {
+  const approvedBatches = new Set(
+    (po.stockLots || [])
+      .filter((lot: any) => (lot?.qcStatus || "").trim() === "ผ่าน")
+      .map((lot: any) => lot?.batchNumber)
+      .filter(Boolean)
+  );
+
+  if (approvedBatches.size === 0) {
+    return 0;
   }
-  return (po.items || []).reduce((sum, item) => {
-    const line =
+
+  return (po.items || []).reduce((sum: number, item: any) => {
+    const batch = item?.batchNumber || "";
+    if (!approvedBatches.has(batch)) return sum;
+
+    const value =
       typeof item?.total === "number"
         ? item.total
         : sanitizeNumber(item?.costPrice) * sanitizeNumber(item?.quantity);
-    return sum + sanitizeNumber(line);
+
+    return sum + sanitizeNumber(value);
   }, 0);
 };
 
@@ -197,6 +210,7 @@ export default function Dashboard() {
                 po?.createdAt || po?.orderedAt || po?.date || po?.invoiceDate || po?.updatedAt,
               items,
               total: sanitizeNumber(totalCandidate),
+              stockLots: Array.isArray(po?.stockLots) ? po.stockLots : [],
             };
           });
         setPurchaseOrders(purchaseSanitized);
@@ -388,7 +402,7 @@ export default function Dashboard() {
   const purchaseExpense = useMemo(
     () =>
       filteredPurchaseOrders.reduce(
-        (sum, po) => sum + resolvePurchaseTotal(po),
+        (sum, po) => sum + resolveApprovedPurchaseTotal(po),
         0
       ),
     [filteredPurchaseOrders]
@@ -397,7 +411,7 @@ export default function Dashboard() {
   const previousPurchaseExpense = useMemo(
     () =>
       previousPurchaseOrders.reduce(
-        (sum, po) => sum + resolvePurchaseTotal(po),
+        (sum, po) => sum + resolveApprovedPurchaseTotal(po),
         0
       ),
     [previousPurchaseOrders]
@@ -413,7 +427,7 @@ export default function Dashboard() {
   const purchasePieData = useMemo(() => {
     const supplierMap = new Map<string, number>();
     filteredPurchaseOrders.forEach((po) => {
-      const value = resolvePurchaseTotal(po);
+      const value = resolveApprovedPurchaseTotal(po);
       if (value <= 0) return;
       supplierMap.set(po.supplierName, (supplierMap.get(po.supplierName) || 0) + value);
     });
