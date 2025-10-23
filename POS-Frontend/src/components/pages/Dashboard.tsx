@@ -498,7 +498,8 @@ export default function Dashboard() {
     })}`;
 
   return (
-    <div className="dashboard-page">
+    <div className="display">
+      <div className="dashboard-page">
       <div className="dashboard-heading">
         <h1>📊 ภาพรวมธุรกิจ</h1>
         <div className="dashboard-controls">
@@ -601,6 +602,7 @@ export default function Dashboard() {
           />
         </section>
       </div>
+    </div>
     </div>
   );
 }
