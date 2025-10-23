@@ -17,7 +17,7 @@ import DashboardPieChartCard from "./dashboard/DashboardPieChartCard";
 import DashboardLineChartCard from "./dashboard/DashboardLineChartCard";
 import DashboardTimeline from "./dashboard/DashboardTimeline";
 
-type RangeKey = "daily" | "weekly" | "monthly";
+type RangeKey = "daily" | "weekly" | "monthly" | "yearly";
 
 type PaymentEntry = {
   id: string;
@@ -69,10 +69,15 @@ const getRangeBounds = (range: RangeKey, selected: Date) => {
     return { start: baseStart, end };
   }
 
-  // monthly
-  const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
-  const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 1);
-  return { start: monthStart, end: monthEnd };
+  if (range === "monthly") {
+    const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
+    const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+    return { start: monthStart, end: monthEnd };
+  }
+
+  const yearStart = new Date(base.getFullYear(), 0, 1);
+  const yearEnd = new Date(base.getFullYear() + 1, 0, 1);
+  return { start: yearStart, end: yearEnd };
 };
 
 const getPreviousRangeBounds = (range: RangeKey, selected: Date) => {
@@ -287,11 +292,18 @@ export default function Dashboard() {
         const iso = entry?.formattedDate?.iso || entry?.date;
         if (!iso) return null;
         const date = toBangkokDate(new Date(iso));
-        const label =
-          filter === "daily"
-            ? date.toLocaleTimeString("th-TH", { hour: "2-digit" })
-            : date.toLocaleDateString("th-TH", { day: "2-digit", month: "short" });
-        const sortValue = filter === "daily" ? date.getHours() : date.getTime();
+        let label: string;
+        let sortValue: number;
+        if (filter === "daily") {
+          label = date.toLocaleTimeString("th-TH", { hour: "2-digit" });
+          sortValue = date.getHours();
+        } else if (filter === "yearly") {
+          label = date.toLocaleDateString("th-TH", { month: "short", year: "numeric" });
+          sortValue = date.getTime();
+        } else {
+          label = date.toLocaleDateString("th-TH", { day: "2-digit", month: "short" });
+          sortValue = date.getTime();
+        }
         const value = sanitizeNumber(entry?.netSales ?? entry?.totalSales);
         return { label, value, sortValue };
       })
@@ -314,6 +326,9 @@ export default function Dashboard() {
           const hour = date.getHours();
           label = `${String(hour).padStart(2, "0")}:00`;
           sortValue = hour;
+        } else if (filter === "yearly") {
+          label = date.toLocaleDateString("th-TH", { month: "short", year: "numeric" });
+          sortValue = date.getTime();
         } else {
           label = date.toLocaleDateString("th-TH", {
             day: "2-digit",
@@ -504,7 +519,7 @@ export default function Dashboard() {
         <h1>📊 ภาพรวมธุรกิจ</h1>
         <div className="dashboard-controls">
           <div className="filters">
-            {(["daily", "weekly", "monthly"] as RangeKey[]).map((type) => (
+            {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
               <button
                 key={type}
                 type="button"
@@ -515,7 +530,9 @@ export default function Dashboard() {
                   ? "รายวัน"
                   : type === "weekly"
                   ? "รายสัปดาห์"
-                  : "รายเดือน"}
+                  : type === "monthly"
+                  ? "รายเดือน"
+                  : "รายปี"}
               </button>
             ))}
           </div>
@@ -523,8 +540,15 @@ export default function Dashboard() {
             selected={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
             locale={th}
-            dateFormat={filter === "monthly" ? "MMMM yyyy" : "dd MMMM yyyy"}
+            dateFormat={
+              filter === "monthly"
+                ? "MMMM yyyy"
+                : filter === "yearly"
+                ? "yyyy"
+                : "dd MMMM yyyy"
+            }
             showMonthYearPicker={filter === "monthly"}
+            showYearPicker={filter === "yearly"}
             className="date-picker"
           />
         </div>

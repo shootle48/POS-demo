@@ -38,6 +38,9 @@ const COLORS = [
 const GRADIENTS = {
   purple: { id: "gPurple", from: "#6C5CE7", to: "rgba(108,92,231,0.12)" },
 };
+
+const LINE_CHART_HEIGHT = 320;
+const PIE_CHART_HEIGHT = 300;
 type RangeKey = "daily" | "weekly" | "monthly";
 const DEFAULT_IMG = "https://cdn-icons-png.flaticon.com/512/2331/2331970.png";
 
@@ -824,8 +827,11 @@ export default function HomePage() {
           <section className="panel card-like area-receipt">
             <h2 className="section-title">{lineTitle}</h2>
             <div className="chart-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineChartData}>
+              <ResponsiveContainer width="100%" height={LINE_CHART_HEIGHT}>
+                <LineChart
+                  data={lineChartData}
+                  margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
+                >
                   <defs>
                     <linearGradient
                       id={GRADIENTS.purple.id}
@@ -861,8 +867,8 @@ export default function HomePage() {
           <section className="panel card-like area-pie1">
             <h2 className="section-title">รายได้ & กำไรรวม ({rangeLabel})</h2>
             <div className="pie-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 32 }}>
                   <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
                   <Legend verticalAlign="bottom" height={48} />
                   <Pie
@@ -892,8 +898,8 @@ export default function HomePage() {
           <section className="panel card-like area-pie2">
             <h2 className="section-title">QC ผ่าน {rangeLabel}</h2>
             <div className="pie-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 24 }}>
                   <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
                   <Pie
                     data={poPie}
