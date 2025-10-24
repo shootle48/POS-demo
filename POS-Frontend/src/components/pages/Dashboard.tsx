@@ -262,7 +262,13 @@ export default function Dashboard() {
 
   const topProducts = useMemo(() => {
     const base = summaryData?.topProducts?.[filter] || [];
-    return base.slice(0, 5).map((item: any, idx: number) => ({
+    const filtered = base.filter((item: any) => {
+      const qty = sanitizeNumber(item?.quantity);
+      const revenue = sanitizeNumber(item?.netRevenue ?? item?.revenue);
+      return qty > 0 || revenue > 0;
+    });
+
+    return filtered.slice(0, 5).map((item: any, idx: number) => ({
       rank: idx + 1,
       name: item?.name || item?.productName || "-",
       quantity: sanitizeNumber(item?.quantity),
@@ -550,7 +556,7 @@ export default function Dashboard() {
           <DashboardTopList
             items={topProducts}
             loading={loading}
-            emptyMessage="ยังไม่มีข้อมูลสินค้าขายดีในช่วงนี้"
+            emptyMessage="ยังไม่มีการขายสินค้าในช่วงนี้"
           />
         </section>
 

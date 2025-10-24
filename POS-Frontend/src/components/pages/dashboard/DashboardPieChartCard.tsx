@@ -37,7 +37,8 @@ const renderPercentLabel = ({
   const y = cy + radius * Math.sin(angle);
   const anchor = x > cx ? "start" : "end";
   const safePercent = Number.isFinite(percent) ? percent : 0;
-  const percentageLabel = `${Math.max(0, Math.round((safePercent || 0) * 100))}%`;
+  const percentageLabel = `${Math.max(0, Math.round(safePercent * 100))}%`;
+
   return (
     <text
       x={x}
@@ -74,15 +75,15 @@ const DashboardPieChartCard: React.FC<DashboardPieChartCardProps> = ({
     <>
       <div className="chart-wrapper">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart style={{ width: "100%", height: "100%" }}>
+          <PieChart>
             <Pie
               data={chartData}
               dataKey="value"
               nameKey="name"
-              innerRadius="72%"
-              outerRadius="100%"
-              paddingAngle={5}
-              cornerRadius="45%"
+              innerRadius={55}
+              outerRadius={90}
+              paddingAngle={3}
+              cornerRadius={12}
               labelLine={false}
               label={renderPercentLabel}
             >
