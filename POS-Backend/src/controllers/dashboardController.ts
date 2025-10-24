@@ -259,6 +259,9 @@ export async function aggregateSales(
   };
 
   for (const r of receipts) {
+    if (r.isReturn) {
+      continue;
+    }
     const { key, str } = makeKey(r.timestamp as Date);
     if (!buckets.has(str)) {
       buckets.set(str, {
@@ -417,7 +420,7 @@ function getTopProducts(data: any[]) {
 // ======================= By Employee =======================
 async function aggregateByEmployee(start: Date, end: Date) {
     const receipts = await Receipt.aggregate([
-        { $match: { timestamp: { $gte: start, $lte: end } } },
+        { $match: { timestamp: { $gte: start, $lte: end }, isReturn: { $ne: true } } },
         {
             $group: {
                 _id: "$employeeName",
