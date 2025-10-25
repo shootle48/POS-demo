@@ -50,14 +50,20 @@
   gap: 16px;
 }
 
-.employee-area-top5,
-.employee-area-receipt {
+.employee-area-top5 {
   grid-column: 1 / -1;
 }
 
-.employee-area-payment,
+.employee-area-receipt {
+  grid-column: span 4;
+}
+
 .employee-area-stock {
-  grid-column: span 6;
+  grid-column: span 8;
+}
+
+.employee-area-payment {
+  grid-column: 1 / -1;
 }
 
 .employee-area-kpi1,
@@ -358,8 +364,9 @@
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
-  .employee-area-payment,
-  .employee-area-stock {
+  .employee-area-receipt,
+  .employee-area-stock,
+  .employee-area-payment {
     grid-column: 1 / -1;
   }
 }
@@ -371,8 +378,9 @@
 
   .employee-area-kpi1,
   .employee-area-kpi2,
-  .employee-area-payment,
-  .employee-area-stock {
+  .employee-area-receipt,
+  .employee-area-stock,
+  .employee-area-payment {
     grid-column: 1 / -1;
   }
 }

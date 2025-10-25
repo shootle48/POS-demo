@@ -589,6 +589,64 @@ export default function EmployeeDashboard() {
               </div>
             </section>
 
+            <section className="card-like employee-area-stock">
+              <h2 className="section-title">สินค้าเหลือน้อย / ใกล้หมดอายุ</h2>
+              <div className="table-scroll tall">
+                <table className="nice-table employee-stock-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 60 }}>ลำดับ</th>
+                      <th>สินค้า</th>
+                      <th>สถานะ</th>
+                      <th style={{ textAlign: "right" }}>คงเหลือ</th>
+                      <th style={{ textAlign: "right" }}>จุดสั่งซื้อ</th>
+                      <th>วันหมดอายุ</th>
+                      <th>ซัพพลายเออร์</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lowInventoryItems.map((item, idx) => (
+                      <tr key={`${item.id}-${idx}`}>
+                        <td>{idx + 1}</td>
+                        <td>
+                          <div className="employee-stock-product">
+                            <div className="employee-stock-thumb">
+                              <img src={item.imageUrl} alt={item.name} />
+                            </div>
+                            <div className="employee-stock-meta">
+                              <span className="employee-stock-name">{item.name}</span>
+                              <span className="employee-stock-barcode">{item.barcode}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`employee-stock-badge ${item.statusTone}`}>
+                            {item.statusLabel}
+                          </span>
+                        </td>
+                        <td className="employee-stock-qty">{item.quantity.toLocaleString()}</td>
+                        <td className="employee-stock-threshold">{item.threshold.toLocaleString()}</td>
+                        <td>
+                          <div className="employee-stock-date">{item.expiryText}</div>
+                          {item.expiryHint && (
+                            <div className="employee-stock-date-hint">{item.expiryHint}</div>
+                          )}
+                        </td>
+                        <td>{item.supplier}</td>
+                      </tr>
+                    ))}
+                    {lowInventoryItems.length === 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
+                          ✅ สินค้าพร้อมขายเพียงพอในช่วงนี้
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
             <div className="card-like kpi employee-area-kpi1">
               <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
               <div className="kpi-val">{formatCurrency(netSalesTotal)}</div>
@@ -675,64 +733,6 @@ export default function EmployeeDashboard() {
                       <tr>
                         <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
                           ยังไม่มีการขายสินค้าในช่วงนี้
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="card-like employee-area-stock">
-              <h2 className="section-title">สินค้าเหลือน้อย / ใกล้หมดอายุ</h2>
-              <div className="table-scroll tall">
-                <table className="nice-table employee-stock-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 60 }}>ลำดับ</th>
-                      <th>สินค้า</th>
-                      <th>สถานะ</th>
-                      <th style={{ textAlign: "right" }}>คงเหลือ</th>
-                      <th style={{ textAlign: "right" }}>จุดสั่งซื้อ</th>
-                      <th>วันหมดอายุ</th>
-                      <th>ซัพพลายเออร์</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowInventoryItems.map((item, idx) => (
-                      <tr key={`${item.id}-${idx}`}>
-                        <td>{idx + 1}</td>
-                        <td>
-                          <div className="employee-stock-product">
-                            <div className="employee-stock-thumb">
-                              <img src={item.imageUrl} alt={item.name} />
-                            </div>
-                            <div className="employee-stock-meta">
-                              <span className="employee-stock-name">{item.name}</span>
-                              <span className="employee-stock-barcode">{item.barcode}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`employee-stock-badge ${item.statusTone}`}>
-                            {item.statusLabel}
-                          </span>
-                        </td>
-                        <td className="employee-stock-qty">{item.quantity.toLocaleString()}</td>
-                        <td className="employee-stock-threshold">{item.threshold.toLocaleString()}</td>
-                        <td>
-                          <div className="employee-stock-date">{item.expiryText}</div>
-                          {item.expiryHint && (
-                            <div className="employee-stock-date-hint">{item.expiryHint}</div>
-                          )}
-                        </td>
-                        <td>{item.supplier}</td>
-                      </tr>
-                    ))}
-                    {lowInventoryItems.length === 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
-                          ✅ สินค้าพร้อมขายเพียงพอในช่วงนี้
                         </td>
                       </tr>
                     )}
