@@ -4,15 +4,18 @@ import {
     getDiscounts,
     deleteDiscount,
     validateDiscount,
-    updateDiscount, // ✅ import ตัวใหม่
+    updateDiscount,
 } from "../controllers/discountController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = express.Router();
+
+router.use(authMiddleware);
 
 router.post("/", createDiscount);
 router.get("/", getDiscounts);
 router.delete("/:id", deleteDiscount);
 router.post("/validate", validateDiscount);
-router.patch("/:id", updateDiscount); // ✅ เพิ่ม endpoint แก้ไข
+router.patch("/:id", updateDiscount);
 
 export default router;
