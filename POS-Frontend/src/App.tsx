@@ -124,6 +124,33 @@ const App: React.FC = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    try {
+      const decoded: any = jwtDecode(token);
+      const rawStoreName = decoded?.nameStore;
+      let normalizedStore = "EAZYPOS";
+      if (typeof rawStoreName === "string" && rawStoreName.length > 0) {
+        try {
+          normalizedStore = decodeURIComponent(rawStoreName);
+        } catch {
+          normalizedStore = rawStoreName;
+        }
+      }
+
+      setUser({
+        role: decoded?.role || "admin",
+        nameStore: normalizedStore,
+      });
+    } catch {
+      setUser(null);
+    }
+  }, [token]);
+
   // ✅ Token refresh ตาม activity
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;

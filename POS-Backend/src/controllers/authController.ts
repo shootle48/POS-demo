@@ -111,6 +111,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       }
 
       // 💡 ต้องแนบ adminId เข้าไปใน token ด้วย
+      const admin = await User.findById(employee.adminId).select('nameStore');
       const token = jwt.sign(
         {
           userId: employee._id,
@@ -121,6 +122,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           profile_img: employee.profile_img,
           role: employee.role,
           adminId: employee.adminId, // สำคัญ! เพื่อให้ใช้ใน getProducts ได้
+          nameStore: admin?.nameStore,
         },
         process.env.JWT_SECRET as string,
         { expiresIn: '3h' }
@@ -149,6 +151,12 @@ export const renewToken = async (req: Request, res: Response): Promise<void> => 
     // ตรวจสอบและถอดรหัส token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
 
+    let refreshedStoreName = decoded.nameStore;
+    if ((!refreshedStoreName || typeof refreshedStoreName !== 'string') && decoded.adminId) {
+      const admin = await User.findById(decoded.adminId).select('nameStore');
+      refreshedStoreName = admin?.nameStore;
+    }
+
     // สร้าง token ใหม่จากข้อมูลเดิม
     const newToken = jwt.sign(
       {
@@ -158,7 +166,7 @@ export const renewToken = async (req: Request, res: Response): Promise<void> => 
         lastname: decoded.lastname,
         username: decoded.username,
         role: decoded.role,
-        nameStore: decoded.nameStore,
+        nameStore: refreshedStoreName,
         profile_img: decoded.profile_img,
         adminId: decoded.adminId,
         position: decoded.position,

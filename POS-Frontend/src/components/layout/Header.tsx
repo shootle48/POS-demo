@@ -84,19 +84,27 @@ const Header: React.FC<NavbarProps> = ({
     if (token) {
       try {
         const decoded: any = jwtDecode(token);
+        let normalizedStore = decoded.nameStore;
+        if (typeof normalizedStore === "string" && normalizedStore.length > 0) {
+          try {
+            normalizedStore = decodeURIComponent(normalizedStore);
+          } catch {
+            // keep original string
+          }
+        }
         setUser({
           name: decoded.name,
           username: decoded.username,
           email: decoded.email,
           role: decoded.role,
-          nameStore: decoded.nameStore,
+          nameStore: normalizedStore || "EAZYPOS",
           profileImg: decoded.profile_img || "default-avatar.png",
         });
       } catch (error) {
         console.error("Invalid token:", error);
       }
     }
-  }, []);
+  }, [isLoggedIn]);
 
   // ✅ เมื่อเปิดดู low stock แล้ว ถือว่า seen
   useEffect(() => {
