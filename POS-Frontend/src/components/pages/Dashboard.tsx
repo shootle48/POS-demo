@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { th } from "date-fns/locale";
+import { jwtDecode } from "jwt-decode";
 
 import "../../styles/page/DashboardPage.css";
 
@@ -118,8 +119,40 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        setUserRole(typeof decoded?.role === "string" ? decoded.role : null);
+      } catch (err) {
+        console.warn("ไม่สามารถถอดรหัสโทเคนได้", err);
+        setUserRole(null);
+      }
+    } else {
+      setUserRole(null);
+    }
+    setAuthChecked(true);
+  }, []);
+
+  const isAdmin = (userRole || "").toLowerCase() === "admin";
+
+  useEffect(() => {
+    if (!authChecked) {
+      return;
+    }
+    if (!isAdmin) {
+      setSummaryData(null);
+      setPayments([]);
+      setPurchaseOrders([]);
+      setStockTransactions([]);
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
     let ignore = false;
     const load = async () => {
       setLoading(true);
@@ -236,7 +269,7 @@ export default function Dashboard() {
     return () => {
       ignore = true;
     };
-  }, [filter, selectedDate]);
+  }, [filter, selectedDate, isAdmin, authChecked]);
 
   const currentRange = useMemo(() => getRangeBounds(filter, selectedDate), [filter, selectedDate]);
   const previousRange = useMemo(
@@ -506,47 +539,69 @@ export default function Dashboard() {
       maximumFractionDigits: 2,
     })}`;
 
+  if (!authChecked) {
+    return (
+      <div className="display">
+        <div className="dashboard-page">
+          <div className="dashboard-loading">กำลังตรวจสอบสิทธิ์...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="display">
+        <div className="dashboard-page">
+          <div className="dashboard-guard-message">
+            หน้านี้สำหรับผู้ดูแลระบบเท่านั้น กรุณาติดต่อผู้ดูแลเพื่อขอสิทธิ์เข้าถึง
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="display">
       <div className="dashboard-page">
-      <div className="dashboard-heading">
-        <h1>📊 ภาพรวมธุรกิจ</h1>
-        <div className="dashboard-controls">
-          <div className="filters">
-            {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={filter === type ? "active" : ""}
-                onClick={() => setFilter(type)}
-              >
-                {type === "daily"
-                  ? "รายวัน"
-                  : type === "weekly"
-                  ? "รายสัปดาห์"
-                  : type === "monthly"
-                  ? "รายเดือน"
-                  : "รายปี"}
-              </button>
-            ))}
+        <div className="dashboard-heading">
+          <h1>📊 ภาพรวมธุรกิจ</h1>
+          <div className="dashboard-controls">
+            <div className="filters">
+              {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={filter === type ? "active" : ""}
+                  onClick={() => setFilter(type)}
+                >
+                  {type === "daily"
+                    ? "รายวัน"
+                    : type === "weekly"
+                    ? "รายสัปดาห์"
+                    : type === "monthly"
+                    ? "รายเดือน"
+                    : "รายปี"}
+                </button>
+              ))}
+            </div>
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => date && setSelectedDate(date)}
+              locale={th}
+              dateFormat={
+                filter === "monthly"
+                  ? "MMMM yyyy"
+                  : filter === "yearly"
+                  ? "yyyy"
+                  : "dd MMMM yyyy"
+              }
+              showMonthYearPicker={filter === "monthly"}
+              showYearPicker={filter === "yearly"}
+              className="date-picker"
+            />
           </div>
-          <DatePicker
-            selected={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
-            locale={th}
-            dateFormat={
-              filter === "monthly"
-                ? "MMMM yyyy"
-                : filter === "yearly"
-                ? "yyyy"
-                : "dd MMMM yyyy"
-            }
-            showMonthYearPicker={filter === "monthly"}
-            showYearPicker={filter === "yearly"}
-            className="date-picker"
-          />
         </div>
-      </div>
 
       {error && <div className="dashboard-error">{error}</div>}
 
