@@ -41,6 +41,15 @@ function fillHours(data: any[], start: Date) {
     });
 }
 
+function getBangkokWeekStart(date: Date) {
+    const weekStart = new Date(date);
+    const day = weekStart.getDay();
+    const diffToMonday = (day + 6) % 7;
+    weekStart.setDate(weekStart.getDate() - diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+    return weekStart;
+}
+
 // ======================= Main Controller =======================
 export const getDashboardStats = async (
     req: AuthRequest,
@@ -65,9 +74,7 @@ export const getDashboardStats = async (
         const endOfDay = new Date(localDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        const startOfWeek = new Date(localDate);
-        startOfWeek.setDate(localDate.getDate() - localDate.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
+        const startOfWeek = getBangkokWeekStart(localDate);
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);

@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import PurchaseOrder from "../models/PurchaseOrder";
+import Employee from "../models/Employee";
+import User from "../models/User";
 import { verifyToken } from "../utils/auth";
 import { generateInvoiceNumber } from "../utils/generateInvoice";
 import { generateBatchNumber } from "../utils/generateBatch";
@@ -23,12 +25,77 @@ async function ensureObjectIdOrByName(model: any, value: any, nameField: string)
     return await model.findOne({ [nameField]: value }).lean();
 }
 
+type DecodedToken = {
+    userId: string;
+    role?: string;
+    adminId?: string;
+    nameStore?: string;
+};
+
+async function resolveOwnerFromRequest(req: Request) {
+    const token = req.header("Authorization")?.split(" ")[1];
+    if (!token) {
+        throw new Error("Unauthorized");
+    }
+
+    const decoded = verifyToken(token) as DecodedToken | string;
+    if (typeof decoded === "string" || !decoded?.userId) {
+        throw new Error("Invalid token");
+    }
+
+    const role = decoded.role;
+    const ownerId =
+        role === "employee" && decoded.adminId
+            ? decoded.adminId.toString()
+            : decoded.userId.toString();
+
+    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+        throw new Error("Invalid owner identifier");
+    }
+
+    let storeName = decoded.nameStore;
+    if (!storeName) {
+        const owner = await User.findById(ownerId).select("nameStore").lean<{ nameStore?: string }>();
+        storeName = owner?.nameStore;
+    }
+
+    return {
+        decoded,
+        token,
+        ownerId,
+        ownerObjectId: new mongoose.Types.ObjectId(ownerId),
+        role,
+        storeName,
+    };
+}
+
 /* ==========================
    ดึงรายการ Purchase Orders ทั้งหมด
 ========================== */
-export const getPurchaseOrders = async (_: Request, res: Response): Promise<void> => {
+export const getPurchaseOrders = async (req: Request, res: Response): Promise<void> => {
     try {
-        const orders = await PurchaseOrder.find()
+        const { ownerObjectId, decoded } = await resolveOwnerFromRequest(req);
+
+        const relatedCreatorIds: mongoose.Types.ObjectId[] = [ownerObjectId];
+        if (decoded.userId && mongoose.Types.ObjectId.isValid(decoded.userId)) {
+            relatedCreatorIds.push(new mongoose.Types.ObjectId(decoded.userId));
+        }
+
+        const employees = await Employee.find({ adminId: ownerObjectId })
+            .select("_id")
+            .lean();
+        employees.forEach((emp) => {
+            if (emp?._id) {
+                relatedCreatorIds.push(emp._id as mongoose.Types.ObjectId);
+            }
+        });
+
+        const orders = await PurchaseOrder.find({
+            $or: [
+                { ownerId: ownerObjectId },
+                { createdBy: { $in: relatedCreatorIds } },
+            ],
+        })
             .populate("supplierId")
             .populate("location") // คลัง
             .populate("createdBy")
@@ -42,6 +109,15 @@ export const getPurchaseOrders = async (_: Request, res: Response): Promise<void
         res.status(200).json({ success: true, message: "ดึงรายการ PO สำเร็จ", data: orders });
     } catch (error) {
         console.error("Get PO Error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Unauthorized") ||
+                error.message.includes("Invalid owner") ||
+                error.message.includes("Invalid token"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({ success: false, message: "Server error while fetching POs" });
     }
 };
@@ -52,8 +128,27 @@ export const getPurchaseOrders = async (_: Request, res: Response): Promise<void
 export const getPurchaseOrderById = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
+        const { ownerObjectId, decoded } = await resolveOwnerFromRequest(req);
 
-        const po = await PurchaseOrder.findById(id)
+        const relatedCreatorIds: mongoose.Types.ObjectId[] = [ownerObjectId];
+        if (decoded.userId && mongoose.Types.ObjectId.isValid(decoded.userId)) {
+            relatedCreatorIds.push(new mongoose.Types.ObjectId(decoded.userId));
+        }
+
+        const employees = await Employee.find({ adminId: ownerObjectId })
+            .select("_id")
+            .lean();
+        employees.forEach((emp) => {
+            const idValue = emp?._id as mongoose.Types.ObjectId | undefined;
+            if (idValue) {
+                relatedCreatorIds.push(idValue);
+            }
+        });
+
+        const po = await PurchaseOrder.findOne({
+            _id: id,
+            $or: [{ ownerId: ownerObjectId }, { createdBy: { $in: relatedCreatorIds } }],
+        })
             .populate("supplierId", "companyName phoneNumber email") // ดึงข้อมูล supplier เพิ่มเติม
             .populate("location", "name code") // คลังสินค้า
             .populate("createdBy", "username email role")
@@ -82,6 +177,15 @@ export const getPurchaseOrderById = async (req: Request, res: Response): Promise
         });
     } catch (error) {
         console.error("❌ Get PO By ID Error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Unauthorized") ||
+                error.message.includes("Invalid owner") ||
+                error.message.includes("Invalid token"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "Server error while fetching PO",
@@ -93,7 +197,26 @@ export const getPurchaseOrderById = async (req: Request, res: Response): Promise
 ========================== */
 export const getAllPurchaseOrders = async (req: Request, res: Response): Promise<void> => {
     try {
-        const purchaseOrders = await PurchaseOrder.find()
+        const { ownerObjectId, decoded } = await resolveOwnerFromRequest(req);
+
+        const relatedCreatorIds: mongoose.Types.ObjectId[] = [ownerObjectId];
+        if (decoded.userId && mongoose.Types.ObjectId.isValid(decoded.userId)) {
+            relatedCreatorIds.push(new mongoose.Types.ObjectId(decoded.userId));
+        }
+
+        const employees = await Employee.find({ adminId: ownerObjectId })
+            .select("_id")
+            .lean();
+        employees.forEach((emp) => {
+            const idValue = emp?._id as mongoose.Types.ObjectId | undefined;
+            if (idValue) {
+                relatedCreatorIds.push(idValue);
+            }
+        });
+
+        const purchaseOrders = await PurchaseOrder.find({
+            $or: [{ ownerId: ownerObjectId }, { createdBy: { $in: relatedCreatorIds } }],
+        })
             .populate("supplierId", "companyName")
             .populate("location", "name code") // คลังสินค้า
             .populate("stockLots", "_id status qcStatus expiryDate") // ✅ ดึงเฉพาะ field ที่จำเป็น
@@ -115,6 +238,15 @@ export const getAllPurchaseOrders = async (req: Request, res: Response): Promise
         });
     } catch (error) {
         console.error("❌ Get All PO Error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Unauthorized") ||
+                error.message.includes("Invalid owner") ||
+                error.message.includes("Invalid token"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "ไม่สามารถดึงข้อมูลใบสั่งซื้อได้",
@@ -128,17 +260,14 @@ export const getAllPurchaseOrders = async (req: Request, res: Response): Promise
 ======================================================== */
 export const createPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
     try {
-        const token = req.header("Authorization")?.split(" ")[1];
-        if (!token) {
-            res.status(401).json({ success: false, message: "Unauthorized, no token" });
+        const { decoded, ownerObjectId, storeName } = await resolveOwnerFromRequest(req);
+
+        if (!mongoose.Types.ObjectId.isValid(decoded.userId)) {
+            res.status(400).json({ success: false, message: "Invalid user identifier" });
             return;
         }
 
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" });
-            return;
-        }
+        const actorId = new mongoose.Types.ObjectId(decoded.userId);
 
         const { purchaseOrderNumber, supplierId, supplierCompany, location, items, invoiceNumber } = req.body;
         if (!Array.isArray(items) || items.length === 0) {
@@ -171,6 +300,8 @@ export const createPurchaseOrder = async (req: Request, res: Response): Promise<
 
         // ✅ สร้าง PO จริง
         const po = await PurchaseOrder.create({
+            ownerId: ownerObjectId,
+            storeName,
             purchaseOrderNumber,
             supplierId: supplierDoc._id,
             supplierCompany: supplierCompany ?? supplierDoc.companyName,
@@ -178,7 +309,7 @@ export const createPurchaseOrder = async (req: Request, res: Response): Promise<
             items: itemsWithTotal,
             totalAmount,
             invoiceNumber: invoiceNumber || generateInvoiceNumber(),
-            createdBy: decoded.userId,
+            createdBy: actorId,
             status: "รอดำเนินการ",
             stockLots: [], // ✅ ยังไม่มีล็อตตอนนี้
         });
@@ -190,6 +321,15 @@ export const createPurchaseOrder = async (req: Request, res: Response): Promise<
         });
     } catch (error) {
         console.error("❌ Create PO Error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Unauthorized") ||
+                error.message.includes("Invalid owner") ||
+                error.message.includes("Invalid token"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "Server error while creating PO",

@@ -102,7 +102,8 @@ export const getReceiptSummary = async (req: AuthRequest, res: Response): Promis
         // ช่วงเวลา
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
+        const diffToMonday = (startOfWeek.getDay() + 6) % 7;
+        startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 

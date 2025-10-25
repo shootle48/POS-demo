@@ -21,6 +21,8 @@ interface IPurchaseOrderItem {
    📄 Interface: Purchase Order หลัก
 ========================== */
 export interface IPurchaseOrder extends Document {
+    ownerId: mongoose.Schema.Types.ObjectId;
+    storeName?: string;
     purchaseOrderNumber: string;
     supplierId: mongoose.Schema.Types.ObjectId;
     supplierCompany: string;
@@ -80,6 +82,8 @@ const PurchaseOrderItemSchema = new Schema<IPurchaseOrderItem>(
 ========================== */
 const PurchaseOrderSchema = new Schema<IPurchaseOrder>(
     {
+        ownerId: { type: Schema.Types.ObjectId, ref: "User" },
+        storeName: { type: String },
         purchaseOrderNumber: { type: String, unique: true, required: true },
         supplierId: { type: Schema.Types.ObjectId, ref: "Supplier", required: true },
         supplierCompany: { type: String, required: true },
@@ -134,6 +138,7 @@ PurchaseOrderSchema.index({ location: 1 });
 PurchaseOrderSchema.index({ status: 1 });
 PurchaseOrderSchema.index({ createdAt: -1 });
 PurchaseOrderSchema.index({ pendingTransferTo: 1 });
+PurchaseOrderSchema.index({ ownerId: 1 });
 
 /* ==========================
    🚀 Export
