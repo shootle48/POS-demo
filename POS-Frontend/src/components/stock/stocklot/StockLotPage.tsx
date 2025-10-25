@@ -30,11 +30,34 @@ const StockLotPage: React.FC = () => {
   // ✅ ฟังก์ชันกรองข้อมูลสินค้า
   const filteredProducts = useMemo(() => {
     if (!data?.stocks) return [];
+
     const stocksArray = Array.isArray(data.stocks)
       ? data.stocks
       : data.stocks.data || [];
 
-    return stocksArray.filter((p: any) => {
+    // ✅ รวม remainingQty ของแต่ละ productId จาก lots
+    const lotArray = Array.isArray(data.lots) ? data.lots : [];
+    const remainingMap: Record<string, number> = {};
+
+    lotArray.forEach((lot: any) => {
+      const pid = lot.productId?._id || lot.productId;
+      const remain = Number(lot.remainingQty ?? 0);
+      if (!pid) return;
+      remainingMap[pid] = (remainingMap[pid] || 0) + remain;
+    });
+
+    // ✅ รวมข้อมูล lot เข้า stocks
+    const merged = stocksArray.map((s: any) => {
+      const pid = s.productId?._id || s.productId;
+      const totalRemaining = remainingMap[pid] ?? 0;
+      return {
+        ...s,
+        totalRemaining, // 👈 จำนวนคงเหลือจาก lots จริง
+      };
+    });
+
+    // ✅ ฟิลเตอร์จากชื่อหรือบาร์โค้ด
+    return merged.filter((p: any) => {
       const name = p.productId?.name || p.name || "";
       const barcode = p.productId?.barcode || p.barcode || "";
       return (
@@ -43,6 +66,7 @@ const StockLotPage: React.FC = () => {
       );
     });
   }, [data, searchQuery]);
+
 
   // ✅ Pagination Logic
   const totalItems = filteredProducts.length;

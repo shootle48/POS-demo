@@ -1,7 +1,24 @@
 /* ===============================
    🧾 Purchase Order Page (Modern)
 =================================*/
+.notification-banner {
+    background-color: #fff8e1;
+    border: 1px solid #ffcc00;
+    color: #856404;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0 20px 0;
+    font-size: 15px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
+.notification-banner::before {
+    content: "⚡";
+    font-size: 18px;
+}
 .create-order-container-suppliers {
     max-width: 900px;
     margin: 40px auto;

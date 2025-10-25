@@ -29,49 +29,43 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
 }) => {
     const batchNumber = item.batchNumber;
 
-    // ✅ Normalize ค่าเริ่มต้น ป้องกัน undefined
     const normalizedQC = {
         ...qc,
         status: qc.status || "รอตรวจสอบ",
         remarks: qc.remarks || "",
         expiryDate: qc.expiryDate || item.expiryDate || "",
+        failedQuantity: qc.failedQuantity ?? 0,
     };
 
-    // ✅ เปลี่ยนสถานะ QC
     const handleChangeStatus = (status: string) => {
         setQcData((prev) => ({
             ...prev,
-            [batchNumber]: {
-                ...prev[batchNumber], // ✅ ใช้ค่าปัจจุบันจาก state
-                status,
-            },
+            [batchNumber]: { ...prev[batchNumber], status },
         }));
     };
 
-    // ✅ เปลี่ยนหมายเหตุ
     const handleChangeRemarks = (remarks: string) => {
         setQcData((prev) => ({
             ...prev,
-            [batchNumber]: {
-                ...prev[batchNumber],
-                remarks,
-            },
+            [batchNumber]: { ...prev[batchNumber], remarks },
         }));
     };
 
-    // ✅ เปลี่ยนวันหมดอายุ
     const handleChangeExpiry = (date: string) => {
         setQcData((prev) => ({
             ...prev,
-            [batchNumber]: {
-                ...prev[batchNumber],
-                expiryDate: date,
-            },
+            [batchNumber]: { ...prev[batchNumber], expiryDate: date },
         }));
     };
 
+    const handleChangeFailed = (value: string) => {
+        const val = Math.max(0, Math.min(Number(value), item.quantity));
+        setQcData((prev) => ({
+            ...prev,
+            [batchNumber]: { ...prev[batchNumber], failedQuantity: val },
+        }));
+    };
 
-    // ✅ อัปโหลดไฟล์
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFiles((prev) => ({
             ...prev,
@@ -79,19 +73,15 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
         }));
     };
 
-    // ✅ ปุ่มบันทึกปิดใช้งานเมื่อยังไม่เลือกสถานะ
     const isSaveDisabled =
-        disabled ||
-        isFinalized ||
-        saving ||
-        normalizedQC.status === "รอตรวจสอบ";
+        disabled || isFinalized || saving || normalizedQC.status === "รอตรวจสอบ";
 
     return (
         <tr className={disabled ? "qc-row-disabled" : ""}>
             <td>{item.productName}</td>
             <td>{batchNumber}</td>
 
-            {/* ✅ ช่องกรอกวันหมดอายุ */}
+            {/* ✅ วันหมดอายุ */}
             <td>
                 <div className="qc-expiry-field">
                     <FontAwesomeIcon icon={faCalendarAlt} className="qc-expiry-icon" />
@@ -114,8 +104,27 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
                 >
                     <option value="รอตรวจสอบ">รอตรวจสอบ</option>
                     <option value="ผ่าน">ผ่าน</option>
+                    <option value="ผ่านบางส่วน">ผ่านบางส่วน</option>
                     <option value="ไม่ผ่าน">ไม่ผ่าน</option>
                 </select>
+            </td>
+
+            {/* ✅ จำนวนทั้งหมด */}
+            <td>
+                <span className="qc-total-text">{item.quantity}</span>
+            </td>
+
+            {/* ✅ จำนวนไม่ผ่าน */}
+            <td>
+                <input
+                    type="number"
+                    min={0}
+                    max={item.quantity}
+                    disabled={disabled || isFinalized}
+                    value={normalizedQC.failedQuantity}
+                    onChange={(e) => handleChangeFailed(e.target.value)}
+                    className="qc-failed-input"
+                />
             </td>
 
             {/* ✅ หมายเหตุ */}

@@ -68,6 +68,10 @@
 }
 
 /* ===============================
+   🌟 QC Table - Layout & Style
+================================= */
+
+/* ===============================
    📋 QC Table
 =================================*/
 .qc-table {
@@ -87,55 +91,133 @@
     text-align: center;
     font-weight: 600;
 }
-
+.qc-table th,
 .qc-table td {
-    padding: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e5e7eb;
     text-align: center;
-    border-top: 1px solid #e2e8f0;
-    font-size: 0.95rem;
+    font-size: 14px;
 }
 
-.qc-table tr:nth-child(even) {
-    background: #f9fafb;
+
+.qc-table tr:hover:not(.qc-row-disabled) {
+    background: #f8fbff;
+}
+
+.qc-row-disabled {
+    opacity: 0.6;
+    background: #f3f4f6;
+    pointer-events: none;
 }
 
 /* ===============================
-   🧩 Inputs and Selects
-=================================*/
-.qc-table select {
-    padding: 6px 10px;
+   📅 Expiry Date Field
+================================= */
+
+.qc-expiry-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.qc-expiry-icon {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.qc-expiry-input {
+    border: 1px solid #d1d5db;
     border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    font-size: 0.9rem;
+    padding: 4px 6px;
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+.qc-expiry-input:focus {
+    border-color: #2563eb;
     outline: none;
-    transition: all 0.25s ease;
+}
+
+/* ===============================
+   ⚙️ QC Status Dropdown
+================================= */
+
+.qc-table select {
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border 0.2s, box-shadow 0.2s;
 }
 
 .qc-table select:focus {
-    border-color: #2563eb;
+    border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    outline: none;
 }
 
-.qc-table input[type="text"] {
-    width: 90%;
-    padding: 6px 8px;
+/* ===============================
+   📊 Partial Quantity Field
+================================= */
+
+.qc-partial-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.qc-total-text {
+    font-weight: 500;
+    color: #111827;
+}
+
+.qc-failed-input {
+    width: 70px;
+    text-align: right;
+    padding: 4px 6px;
+    border: 1px solid #d1d5db;
     border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    font-size: 0.9rem;
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+.qc-failed-input:focus {
+    border-color: #ef4444;
     outline: none;
-    transition: all 0.25s ease;
+}
+
+.qc-failed-label {
+    font-size: 13px;
+    color: #b91c1c;
+    font-weight: 500;
+}
+
+/* ===============================
+   💬 Remarks Input
+================================= */
+
+.qc-table input[type="text"] {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border 0.2s;
 }
 
 .qc-table input[type="text"]:focus {
     border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    outline: none;
 }
 
 /* ===============================
-   📎 Upload
-=================================*/
+   📎 Upload Button
+================================= */
+
 .qc-upload-label {
     display: inline-flex;
     align-items: center;
@@ -154,35 +236,78 @@
     background: #bae6fd;
 }
 
-.qc-file-count {
-    margin-top: 4px;
-    font-size: 0.85rem;
-    color: #475569;
-}
-
-/* ===============================
-   💾 Save Button
-=================================*/
-.qc-save-btn {
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.25s ease;
-}
-
-.qc-save-btn:hover {
-    background: #1e40af;
-}
-
-.qc-save-btn:disabled {
+.qc-upload-label.disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
+.qc-file-count {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* ===============================
+   💾 Save Button
+================================= */
+
+.qc-save-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.25s, transform 0.1s;
+}
+
+.qc-save-btn:hover:not(.disabled) {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.qc-save-btn.disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* ===============================
+   🧠 Responsive Layout
+================================= */
+
+@media (max-width: 1024px) {
+
+    .qc-table th,
+    .qc-table td {
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+
+    .qc-failed-input {
+        width: 55px;
+    }
+
+    .qc-save-btn {
+        padding: 5px 10px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 768px) {
+    .qc-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .qc-table th,
+    .qc-table td {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+}
 /* ===============================
    ✅ Finalize Section
 =================================*/

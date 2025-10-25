@@ -825,12 +825,7 @@ export default function HomePage() {
       <div className="dashboard-overview">
         <div className="dash-grid">
           {/* Top 5 */}
-          <section className="panel card-like area-top5">
-            <h2 className="section-title">สินค้าขายดี (Top 5)</h2>
-            <TopProductsSlider
-              items={topProductsFromApi.slice(0, 5)}
-            />
-          </section>
+
 
           {/* เส้นรายชั่วโมง */}
           <section className="panel card-like area-receipt">

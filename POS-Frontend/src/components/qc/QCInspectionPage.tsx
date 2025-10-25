@@ -67,7 +67,7 @@ const QCInspectionPage: React.FC = () => {
         const token = localStorage.getItem("token") || "";
         if (!batchNumber) return;
 
-        // ✅ ตรวจว่ากรอกวันหมดอายุหรือยัง (ถ้าเลือกผ่าน)
+        // ✅ ตรวจสอบวันหมดอายุเมื่อสถานะเป็น "ผ่าน"
         if (current.status === "ผ่าน" && !current.expiryDate) {
             setPopupMessage(`⚠️ กรุณากรอกวันหมดอายุของ ${item.productName} ก่อนบันทึก`);
             setPopupSuccess(false);
@@ -82,14 +82,30 @@ const QCInspectionPage: React.FC = () => {
             formData.append("productId", item.productId?._id || item.productId || "");
             formData.append("supplierId", po.supplierId?._id || po.supplierId || "");
             formData.append("warehouseId", po.location?._id || po.location || "");
-            formData.append("status", current.status || "รอตรวจสอบ");
+
+            // ✅ คำนวณจำนวนผ่าน / ไม่ผ่าน
+            const total = item.quantity || 0;
+            const failed = Number(current.failedQuantity) || 0;
+            const passed = Math.max(0, total - failed);
+
+            formData.append("totalQuantity", String(total));
+            formData.append("failedQuantity", String(failed));
+            formData.append("passedQuantity", String(passed));
+
+            // ✅ กำหนดสถานะอัตโนมัติ
+            let status = current.status || "รอตรวจสอบ";
+            if (failed > 0 && failed < total) status = "ผ่านบางส่วน";
+            else if (failed === total) status = "ไม่ผ่าน";
+            else if (failed === 0) status = "ผ่าน";
+
+            formData.append("status", status);
             formData.append("remarks", current.remarks || "");
 
-            // ✅ เพิ่มวันหมดอายุทุกครั้ง (ถ้ามี)
+            // ✅ เพิ่มวันหมดอายุ (ถ้ามี)
             if (current.expiryDate) {
                 formData.append("expiryDate", current.expiryDate);
             } else {
-                formData.append("expiryDate", ""); // ป้องกัน undefined
+                formData.append("expiryDate", "");
             }
 
             // ✅ แนบไฟล์แนบ (attachments)
@@ -97,14 +113,19 @@ const QCInspectionPage: React.FC = () => {
                 formData.append("attachments", file)
             );
 
+            // ✅ เรียก API สร้าง / บันทึก QC
             const res = await createQCRecord(formData, token);
 
             if (res.success) {
-                setPopupMessage(`✅ บันทึกผล QC สำหรับ ${item.productName} สำเร็จ`);
+                setPopupMessage(
+                    `✅ บันทึกผล QC สำหรับ ${item.productName} สำเร็จ\n` +
+                    `(ผ่าน ${passed} | ไม่ผ่าน ${failed} จาก ${total})`
+                );
                 setPopupSuccess(true);
                 setShowPopup(true);
                 setPopupLocked(true);
 
+                // ✅ โหลดข้อมูล QC ล่าสุดจาก backend
                 const updated = await getQCByBatch(batchNumber, token);
                 if (updated.success && updated.data.length > 0) {
                     setQcData((prev) => ({
@@ -117,7 +138,8 @@ const QCInspectionPage: React.FC = () => {
                 setPopupSuccess(false);
                 setShowPopup(true);
             }
-        } catch {
+        } catch (error) {
+            console.error("❌ handleSubmitQC Error:", error);
             setPopupMessage("⚠️ เกิดข้อผิดพลาดระหว่างบันทึก QC");
             setPopupSuccess(false);
             setShowPopup(true);
@@ -125,6 +147,7 @@ const QCInspectionPage: React.FC = () => {
             setSaving(false);
         }
     };
+
 
 
     // ✅ สรุป QC ทั้งใบ
@@ -189,8 +212,9 @@ const QCInspectionPage: React.FC = () => {
 
                 // ✅ Redirect หลังจาก popup
                 setTimeout(() => {
-                    window.location.href = "/purchase-orders";
+                    navigate("/purchase-orders");
                 }, 1500);
+
             } else {
                 setPopupMessage("❌ ไม่สามารถสรุป QC ได้");
                 setPopupSuccess(false);

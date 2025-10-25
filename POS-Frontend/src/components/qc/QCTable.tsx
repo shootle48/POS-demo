@@ -27,9 +27,11 @@ const QCTable: React.FC<QCTableProps> = ({
             <thead>
                 <tr>
                     <th>สินค้า</th>
-                    <th>Batch</th>
-                    <th>วันหมดอายุ</th> {/* ✅ เพิ่มคอลัมน์นี้ */}
+                    <th>ล็อตสินค้า</th>
+                    <th>วันหมดอายุ</th>
                     <th>สถานะ QC</th>
+                    <th>จำนวนทั้งหมด</th>
+                    <th>จำนวนไม่ผ่าน</th>
                     <th>หมายเหตุ</th>
                     <th>แนบรูป</th>
                     <th>Action</th>
@@ -40,8 +42,7 @@ const QCTable: React.FC<QCTableProps> = ({
                 {po.items.map((item: any, idx: number) => {
                     const batchNumber = item.batchNumber;
                     const qc = qcData[batchNumber] || {};
-                    const disabled =
-                        isFinalized || (qc._id && qc.status !== "รอตรวจสอบ");
+                    const disabled = isFinalized || (qc._id && qc.status !== "รอตรวจสอบ");
 
                     return (
                         <QCTableRow

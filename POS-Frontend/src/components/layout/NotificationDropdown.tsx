@@ -13,18 +13,25 @@ import { getStockData } from "../../api/stock/stock";
 import "../../styles/page/Notification.css";
 
 interface StockItem {
-    _id: string;
+    _id: string;            // id ของ stock
+    productId?: string;     // ✅ id ของ product จริง
     barcode: string;
     name: string;
     imageUrl: string;
     totalQuantity: number;
     updatedAt: string;
     location: string;
+    locationId?: string;
     status: string;
-    supplier: string;
+    supplierId?: string;
+    supplierName?: string;
     category: string;
     threshold?: number;
+    costPrice?: number;
+    salePrice?: number;
 }
+
+
 
 interface NotificationDropdownProps {
     notificationOpen: boolean;
@@ -47,9 +54,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     const processedRef = useRef<Set<string>>(new Set());
     const navigate = useNavigate();
 
-    // ✅ ทำให้ข้อมูล stock อยู่ใน format เดียวกันเสมอ
     const normalizeStockItem = (raw: any): StockItem => ({
-        _id: raw._id,
+        _id: raw._id, // id ของ stock
+        productId: raw.productId?._id || raw.productId || "", // ✅ id ของ product จริง
         barcode: raw.barcode ?? raw.productId?.barcode ?? "",
         name: raw.name ?? raw.productId?.name ?? "ไม่พบชื่อสินค้า",
         imageUrl: raw.imageUrl ?? raw.productId?.imageUrl ?? "",
@@ -59,11 +66,16 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             typeof raw.location === "object"
                 ? raw.location?.name ?? raw.location?._id ?? ""
                 : raw.location ?? "",
+        locationId:
+            typeof raw.location === "object"
+                ? raw.location?._id ?? ""
+                : raw.location ?? "",
         status: raw.status ?? "",
-        supplier:
-            raw.supplier ??
-            raw.supplierName ??
+        supplierId: raw.supplierId?._id || raw.supplierId || "",
+        supplierName:
             raw.supplierId?.companyName ??
+            raw.supplierName ??
+            raw.supplier ??
             "",
         category:
             typeof raw.category === "string"
@@ -73,7 +85,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             raw.threshold !== undefined && raw.threshold !== null
                 ? Number(raw.threshold)
                 : 5,
+        costPrice: Number(raw.costPrice ?? raw.productId?.costPrice ?? 0),
+        salePrice: Number(raw.salePrice ?? raw.productId?.salePrice ?? 0),
     });
+
 
     const isLow = (item: StockItem) =>
         item.totalQuantity <= (item.threshold ?? 5);

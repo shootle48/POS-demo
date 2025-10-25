@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { deactivateStockLot } from "../../../api/stock/stockLotApi";
 import "../../../styles/stock/StockLotModal.css";
 
@@ -7,18 +7,55 @@ interface Props {
     po?: any;
     lots: any[];
     onClose: () => void;
+    refreshData: () => void;
 }
 
-const StockLotModal: React.FC<Props> = ({ product, po, lots, onClose }) => {
-    const handleDeactivate = async (lotId: string) => {
-        const token = localStorage.getItem("token") || "";
-        if (!window.confirm("คุณต้องการปิดล็อตนี้ใช่ไหม?")) return;
-        await deactivateStockLot(lotId, token);
-        window.location.reload();
+const StockLotModal: React.FC<Props> = ({ product, po, lots, onClose, refreshData }) => {
+    const [showPopup, setShowPopup] = useState(false);
+    const [selectedLot, setSelectedLot] = useState<any>(null);
+    const [reason, setReason] = useState("");
+    const [status, setStatus] = useState("สินค้าเสียหาย");
+    const [loading, setLoading] = useState(false);
+
+    const statusOptions = [
+        "สินค้าเสียหาย",
+        "หมดอายุ",
+        "ไม่ผ่าน QC",
+        "รอคัดออก",
+        "อื่นๆ",
+    ];
+
+    const handleOpenPopup = (lot: any) => {
+        setSelectedLot(lot);
+        setShowPopup(true);
     };
 
-    const getQCClass = (status: string) => {
-        switch (status) {
+    const handleDeactivate = async () => {
+        if (!selectedLot) return;
+        const token = localStorage.getItem("token") || "";
+
+        if (!reason.trim()) {
+            alert("⚠️ กรุณาระบุเหตุผลในการปิดล็อต");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await deactivateStockLot(selectedLot._id, token, { reason, status });
+            alert("✅ ปิดล็อตสำเร็จ");
+            refreshData();
+            setShowPopup(false);
+            setReason("");
+        } catch (err) {
+            console.error(err);
+            alert("❌ เกิดข้อผิดพลาดในการปิดล็อต");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getQCClass = (qcStatus: string) => {
+        switch (qcStatus) {
             case "ผ่าน":
                 return "qc-pass";
             case "ไม่ผ่าน":
@@ -47,22 +84,23 @@ const StockLotModal: React.FC<Props> = ({ product, po, lots, onClose }) => {
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Batch</th>
-                                <th>จำนวนรับเข้า</th>
-                                <th>วันที่รับเข้า</th>
+                                <th>เลขล็อตสินค้า</th>
+                                <th>จำนวนเริ่มต้น</th> {/* ✅ เพิ่ม */}
+                                <th>จำนวนคงเหลือ</th>
                                 <th>วันหมดอายุ</th>
                                 <th>สถานะ QC</th>
+                                <th>สถานะล็อต</th>
                                 <th>จัดการ</th>
                             </tr>
                         </thead>
                         <tbody>
                             {lots.length > 0 ? (
                                 lots.map((lot, i) => (
-                                    <tr key={i}>
+                                    <tr key={lot._id}>
                                         <td>{i + 1}</td>
-                                        <td>{lot.batchNumber}</td>
-                                        <td>{lot.quantity}</td>
-                                        <td>{new Date(lot.createdAt).toLocaleDateString("th-TH")}</td>
+                                        <td>{lot.batchNumber || "-"}</td>
+                                        <td>{lot.quantity ?? 0}</td> {/* ✅ จำนวนก่อนขาย */}
+                                        <td>{lot.remainingQty ?? 0}</td> {/* ✅ จำนวนหลังขาย */}
                                         <td>
                                             {lot.expiryDate
                                                 ? new Date(lot.expiryDate).toLocaleDateString("th-TH")
@@ -73,19 +111,24 @@ const StockLotModal: React.FC<Props> = ({ product, po, lots, onClose }) => {
                                                 {lot.qcStatus || "ไม่ทราบ"}
                                             </span>
                                         </td>
+                                        <td>{lot.status || "-"}</td>
                                         <td>
-                                            <button
-                                                className="danger-btn"
-                                                onClick={() => handleDeactivate(lot._id)}
-                                            >
-                                                ปิดล็อต
-                                            </button>
+                                            {lot.isActive ? (
+                                                <button
+                                                    className="danger-btn"
+                                                    onClick={() => handleOpenPopup(lot)}
+                                                >
+                                                    ปิดล็อต
+                                                </button>
+                                            ) : (
+                                                <span className="closed-label">ปิดแล้ว</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} style={{ textAlign: "center", padding: "20px" }}>
+                                    <td colSpan={8} style={{ textAlign: "center", padding: "20px" }}>
                                         ❌ ไม่มีข้อมูลล็อต
                                     </td>
                                 </tr>
@@ -98,6 +141,55 @@ const StockLotModal: React.FC<Props> = ({ product, po, lots, onClose }) => {
                     ปิด
                 </button>
             </div>
+
+            {/* === Popup ปิดล็อต === */}
+            {showPopup && (
+                <div className="stocklots-modal-popup-overlay" onClick={() => setShowPopup(false)}>
+                    <div
+                        className="stocklots-modal-popup-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3>🧾 ระบุเหตุผลในการปิดล็อต</h3>
+
+                        <label>สถานะหลังปิด:</label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="stocklots-modal-popup-select"
+                        >
+                            {statusOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                    {opt}
+                                </option>
+                            ))}
+                        </select>
+
+                        <label>เหตุผล:</label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            className="stocklots-modal-popup-textarea"
+                            placeholder="เช่น พบตำหนิหลัง QC, สินค้าชำรุด, หมดอายุ..."
+                        />
+
+                        <div className="stocklots-popup-actions">
+                            <button
+                                className="stocklots-confirm-btn"
+                                onClick={handleDeactivate}
+                                disabled={loading}
+                            >
+                                {loading ? "⏳ กำลังดำเนินการ..." : "ยืนยัน"}
+                            </button>
+                            <button
+                                className="stocklots-cancel-btn"
+                                onClick={() => setShowPopup(false)}
+                            >
+                                ยกเลิก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

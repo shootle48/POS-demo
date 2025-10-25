@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import StockLot from "../models/StockLot";
+import Stock from "../models/Stock";
+import StockTransaction from "../models/StockTransaction";
+import mongoose from "mongoose";
 import Product from "../models/Product";
 import User from "../models/User";
 import Employee from "../models/Employee";
@@ -240,10 +243,11 @@ export const updateQCStatus = async (req: Request, res: Response): Promise<void>
 };
 
 /* ===================================================
-   🚫 ปิดล็อต (Inactive / หมดอายุ)
+   🚫 ปิดล็อตสินค้า (Deactivate Stock Lot)
 =================================================== */
 export const deactivateStockLot = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ✅ ตรวจสอบ token และดึง userId
         const token = req.header("Authorization")?.split(" ")[1];
         if (!token) {
             res.status(401).json({ success: false, message: "Unauthorized" });
@@ -256,22 +260,82 @@ export const deactivateStockLot = async (req: Request, res: Response): Promise<v
             return;
         }
 
+        const userId = decoded.userId;
         const { lotId } = req.params;
+        const { reason = "พบสินค้าชำรุดหลัง QC", status = "สินค้าเสียหาย" } = req.body;
 
+        // 🔍 1. หา lot
         const lot = await StockLot.findById(lotId);
         if (!lot) {
             res.status(404).json({ success: false, message: "ไม่พบล็อตสินค้าที่ต้องการปิด" });
             return;
         }
 
+        // 🧩 ถ้าปิดไปแล้ว ไม่ให้ปิดซ้ำ
+        if (!lot.isActive) {
+            res.status(400).json({ success: false, message: "ล็อตนี้ถูกปิดไปแล้ว" });
+            return;
+        }
+
+        // 🧮 2. คำนวณจำนวนที่เหลือในล็อต
+        const lotQty = lot.remainingQty ?? lot.quantity ?? 0;
+
+        // 📦 3. ลดจำนวนใน stock รวม
+        const stock = await Stock.findOne({
+            productId: lot.productId,
+            location: lot.location,
+        });
+
+        if (stock) {
+            const oldQty = stock.totalQuantity ?? 0;
+            const newQty = Math.max(oldQty - lotQty, 0);
+            stock.totalQuantity = newQty;
+            await stock.save();
+
+            console.log(`📉 ลดจำนวนใน Stock: ${oldQty} → ${newQty}`);
+        }
+
+        // 🧾 4. บันทึก StockTransaction (LOT_DEACTIVATE)
+        await StockTransaction.create({
+            stockId: stock?._id || new mongoose.Types.ObjectId(),
+            stockLotId: lot._id,
+            productId: lot.productId,
+            userId,
+            type: "LOT_DEACTIVATE",
+            quantity: -Math.abs(lotQty),
+            reference: `ปิดล็อต: ${lot.batchNumber || lot._id}`,
+            notes: reason,
+            source: "SELF",
+            location: lot.location,
+            costPrice: lot.costPrice ?? undefined,
+        });
+
+        // 🧍‍♂️ 5. ปรับสถานะใน StockLot
         lot.isActive = false;
-        lot.status = "รอคัดออก";
+        lot.status = status;
+        lot.reason = reason;
+        lot.closedBy = userId;
+        lot.closedAt = new Date();
         await lot.save();
 
-        res.status(200).json({ success: true, message: "ปิดล็อตสำเร็จ", data: lot });
+        // ✅ 6. ตอบกลับ
+        res.status(200).json({
+            success: true,
+            message: "✅ ปิดล็อตสำเร็จ และลดจำนวนสต็อกออกแล้ว",
+            data: {
+                lotId: lot._id,
+                batchNumber: lot.batchNumber,
+                status: lot.status,
+                reason: lot.reason,
+                remainingQty: lot.remainingQty,
+            },
+        });
     } catch (error) {
-        console.error("Deactivate StockLot Error:", error);
-        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการปิดล็อต" });
+        console.error("❌ Deactivate StockLot Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "เกิดข้อผิดพลาดในการปิดล็อต",
+            error: error instanceof Error ? error.message : String(error),
+        });
     }
 };
-
