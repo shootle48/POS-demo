@@ -564,42 +564,43 @@ export default function Dashboard() {
   return (
     <div className="display">
       <div className="dashboard-page">
-      <div className="dashboard-heading">
-        <h1>📊 ภาพรวมธุรกิจ</h1>
-        <div className="dashboard-controls">
-          <div className="filters">
-            {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={filter === type ? "active" : ""}
-                onClick={() => setFilter(type)}
-              >
-                {type === "daily"
-                  ? "รายวัน"
-                  : type === "weekly"
-                  ? "รายสัปดาห์"
-                  : type === "monthly"
-                  ? "รายเดือน"
-                  : "รายปี"}
-              </button>
-            ))}
+        <div className="dashboard-heading">
+          <h1>📊 ภาพรวมธุรกิจ</h1>
+          <div className="dashboard-controls">
+            <div className="filters">
+              {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={filter === type ? "active" : ""}
+                  onClick={() => setFilter(type)}
+                >
+                  {type === "daily"
+                    ? "รายวัน"
+                    : type === "weekly"
+                    ? "รายสัปดาห์"
+                    : type === "monthly"
+                    ? "รายเดือน"
+                    : "รายปี"}
+                </button>
+              ))}
+            </div>
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => date && setSelectedDate(date)}
+              locale={th}
+              dateFormat={
+                filter === "monthly"
+                  ? "MMMM yyyy"
+                  : filter === "yearly"
+                  ? "yyyy"
+                  : "dd MMMM yyyy"
+              }
+              showMonthYearPicker={filter === "monthly"}
+              showYearPicker={filter === "yearly"}
+              className="date-picker"
+            />
           </div>
-          <DatePicker
-            selected={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
-            locale={th}
-            dateFormat={
-              filter === "monthly"
-                ? "MMMM yyyy"
-                : filter === "yearly"
-                ? "yyyy"
-                : "dd MMMM yyyy"
-            }
-            showMonthYearPicker={filter === "monthly"}
-            showYearPicker={filter === "yearly"}
-            className="date-picker"
-          />
         </div>
 
       {error && <div className="dashboard-error">{error}</div>}
