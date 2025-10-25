@@ -84,10 +84,22 @@ export const getDashboardStats = async (
         );
 
         // ===== ดึงข้อมูลยอดขายหลัก =====
-        const [dailyRaw, weeklyData, monthlyData] = await Promise.all([
+        const startOfYear = new Date(localDate.getFullYear(), 0, 1);
+        const endOfYear = new Date(
+            localDate.getFullYear(),
+            11,
+            31,
+            23,
+            59,
+            59,
+            999
+        );
+
+        const [dailyRaw, weeklyData, monthlyData, yearlyData] = await Promise.all([
             aggregateSales(startOfDay, endOfDay, "hour"),
             aggregateSales(startOfWeek, endOfWeek, "day"),
             aggregateSales(startOfMonth, endOfMonth, "day"),
+            aggregateSales(startOfYear, endOfYear, "month"),
         ]);
 
         const dailyData = fillHours(dailyRaw, startOfDay);
@@ -97,6 +109,7 @@ export const getDashboardStats = async (
             daily: makeSummary(dailyData),
             weekly: makeSummary(weeklyData),
             monthly: makeSummary(monthlyData),
+            yearly: makeSummary(yearlyData),
         };
 
         // ===== รวมสินค้าขายดี =====
@@ -104,6 +117,7 @@ export const getDashboardStats = async (
             daily: getTopProducts(dailyRaw),
             weekly: getTopProducts(weeklyData),
             monthly: getTopProducts(monthlyData),
+            yearly: getTopProducts(yearlyData),
         };
 
         // ✅ แทรกสินค้าขายดีของวันในแต่ละชั่วโมง
@@ -124,6 +138,7 @@ export const getDashboardStats = async (
             daily: await aggregateByEmployee(startOfDay, endOfDay),
             weekly: await aggregateByEmployee(startOfWeek, endOfWeek),
             monthly: await aggregateByEmployee(startOfMonth, endOfMonth),
+            yearly: await aggregateByEmployee(startOfYear, endOfYear),
         };
 
         // ===== ช่วงก่อนหน้า =====
@@ -133,6 +148,10 @@ export const getDashboardStats = async (
         prevWeekStart.setDate(prevWeekStart.getDate() - 7);
         const prevMonthStart = new Date(startOfMonth);
         prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
+        const prevYearStart = new Date(startOfYear);
+        prevYearStart.setFullYear(prevYearStart.getFullYear() - 1);
+        const prevYearEnd = new Date(startOfYear);
+        prevYearEnd.setMilliseconds(prevYearEnd.getMilliseconds() - 1);
 
         const prevDayData = makeSummary(
             (await aggregateSales(prevDayStart, startOfDay, "hour")) || []
@@ -143,12 +162,16 @@ export const getDashboardStats = async (
         const prevMonthData = makeSummary(
             (await aggregateSales(prevMonthStart, startOfMonth, "day")) || []
         );
+        const prevYearData = makeSummary(
+            (await aggregateSales(prevYearStart, prevYearEnd, "month")) || []
+        );
 
         // ===== การเปลี่ยนแปลง =====
         const changes = {
             daily: calcChange(summary.daily, prevDayData),
             weekly: calcChange(summary.weekly, prevWeekData),
             monthly: calcChange(summary.monthly, prevMonthData),
+            yearly: calcChange(summary.yearly, prevYearData),
         };
 
         // ===== ส่งข้อมูลกลับ =====
@@ -158,10 +181,17 @@ export const getDashboardStats = async (
                 daily: dailyData,
                 weekly: weeklyData,
                 monthly: monthlyData,
+                yearly: yearlyData,
                 summary,
                 topProducts,
                 byEmployee,
-                changes: changes || { daily: {}, weekly: {}, monthly: {} },
+                changes:
+                    changes || {
+                        daily: {},
+                        weekly: {},
+                        monthly: {},
+                        yearly: {},
+                    },
             },
         });
     } catch (error) {
@@ -177,7 +207,7 @@ export const getDashboardStats = async (
 export async function aggregateSales(
   start: Date,
   end: Date,
-  groupBy: "hour" | "day"
+  groupBy: "hour" | "day" | "month"
 ) {
   // ดึงราคาทุนล่าสุดจากสต็อกไว้เป็น fallback
   const stocks = await Stock.find({}).lean();
@@ -195,7 +225,8 @@ export async function aggregateSales(
 
   type BucketKey =
     | { hour: number }
-    | { year: number; month: number; day: number };
+    | { year: number; month: number; day: number }
+    | { year: number; month: number };
 
   // เก็บรวมเป็น bucket ตามชั่วโมง/รายวัน
   const buckets = new Map<
@@ -211,19 +242,26 @@ export async function aggregateSales(
   >();
 
   const makeKey = (d: Date): { key: BucketKey; str: string } => {
+    const loc = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
     if (groupBy === "hour") {
-      const hour = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })).getHours();
+      const hour = loc.getHours();
       return { key: { hour }, str: `h:${hour}` };
-    } else {
-      const loc = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-      return {
-        key: { year: loc.getFullYear(), month: loc.getMonth() + 1, day: loc.getDate() },
-        str: `d:${loc.getFullYear()}-${loc.getMonth() + 1}-${loc.getDate()}`,
-      };
     }
+    if (groupBy === "month") {
+      const year = loc.getFullYear();
+      const month = loc.getMonth() + 1;
+      return { key: { year, month }, str: `m:${year}-${month}` };
+    }
+    return {
+      key: { year: loc.getFullYear(), month: loc.getMonth() + 1, day: loc.getDate() },
+      str: `d:${loc.getFullYear()}-${loc.getMonth() + 1}-${loc.getDate()}`,
+    };
   };
 
   for (const r of receipts) {
+    if (r.isReturn) {
+      continue;
+    }
     const { key, str } = makeKey(r.timestamp as Date);
     if (!buckets.has(str)) {
       buckets.set(str, {
@@ -288,9 +326,12 @@ export async function aggregateSales(
       if ("hour" in b.key) {
         date = new Date(start);
         date.setHours(b.key.hour, 0, 0, 0);
-      } else {
+      } else if ("day" in b.key) {
         const { year, month, day } = b.key;
         date = new Date(year, month - 1, day);
+      } else {
+        const { year, month } = b.key;
+        date = new Date(year, month - 1, 1);
       }
 
       // best seller ใน bucket
@@ -379,7 +420,7 @@ function getTopProducts(data: any[]) {
 // ======================= By Employee =======================
 async function aggregateByEmployee(start: Date, end: Date) {
     const receipts = await Receipt.aggregate([
-        { $match: { timestamp: { $gte: start, $lte: end } } },
+        { $match: { timestamp: { $gte: start, $lte: end }, isReturn: { $ne: true } } },
         {
             $group: {
                 _id: "$employeeName",

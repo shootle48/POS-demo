@@ -39,7 +39,7 @@ export const deleteReceipt = async (saleId: string) => {
 
 export const fetchSalesSummary = async (
   date: Date,
-  filter: "daily" | "weekly" | "monthly"
+  filter: "daily" | "weekly" | "monthly" | "yearly"
 ) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/dashboard/stats`, {

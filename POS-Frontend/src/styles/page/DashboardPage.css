@@ -107,6 +107,24 @@
   color: var(--text-muted);
 }
 
+.dashboard-loading,
+.dashboard-guard-message {
+  background: #fff;
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: 48px 32px;
+  margin: 96px auto;
+  max-width: 520px;
+  text-align: center;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.dashboard-guard-message {
+  font-weight: 600;
+}
+
 .area-top-list { grid-area: top; }
 .area-kpis { grid-area: kpi; }
 .area-sales { grid-area: sales; }
