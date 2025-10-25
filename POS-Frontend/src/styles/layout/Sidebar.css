@@ -3,7 +3,7 @@
     left: 0;
     top: 65px;
     width: 230px;
-    height: calc(100% - 80px);
+    height: calc(100vh - 65px);
     /* หักความสูงของ header */
     background: linear-gradient(135deg, #5e768b, #456686);
     color: white;
@@ -15,6 +15,7 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease-in-out;
     z-index: 2000;
+    overflow: hidden;
 }
 
 /* ส่วนหัว */
@@ -143,6 +144,7 @@
     transition: background 0.25s, color 0.25s, transform 0.2s;
     border-radius: 8px;
     margin: 4px 0;
+    position: relative;
 }
 
 .navLinks li:hover {
@@ -294,27 +296,33 @@
     background: #aaa;
 }
 
-.sidebar.closed .item-dropdown .item-details {
-    position: fixed;
-    left: 100%;
+.sidebar.closed .item-details.floating {
+    position: absolute;
+    left: 60px;
     top: 0;
-    width: 400px;
+    width: 220px;
     background: #34495e;
     border-radius: 5px;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
-    opacity: 1;
-    max-height: 300px;
+    opacity: 0;
+    max-height: 0;
+    pointer-events: none;
     z-index: 4000;
-    /* ให้แน่ใจว่ามากกว่าทุก element อื่น */
+    transition: opacity 0.3s ease, max-height 0.3s ease;
 }
 
+.sidebar.closed .item-details.floating.open {
+    opacity: 1;
+    max-height: 320px;
+    pointer-events: auto;
+}
 
-.sidebar.closed .item-dropdown .item-details li {
+.sidebar.closed .item-details.floating li {
     padding: 10px;
     white-space: nowrap;
 }
 
-.sidebar.closed .item-dropdown .item-details li:hover {
+.sidebar.closed .item-details.floating li:hover {
     background: rgba(255, 255, 255, 0.1);
     transform: scale(1);
 }
@@ -342,14 +350,5 @@
 }
 
 .floating {
-    position: absolute;
-    left: 100%;
-    top: 5px;
-    width: 200px;
     padding-bottom: 10px;
-    border-radius: 5px;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out;
-    z-index: 5000;
 }

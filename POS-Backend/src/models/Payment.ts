@@ -12,11 +12,15 @@ export interface IPayment extends Document {
     profit: number; // กำไรของธุรกรรมนี้ (refund จะเป็นค่าลบ)
     status: "รอดำเนินการ" | "สำเร็จ" | "ล้มเหลว";
     notes?: string; // เก็บเหตุผล เช่น "คืนสินค้า"
+    userId: mongoose.Types.ObjectId;
+    storeName?: string;
     createdAt: Date;
 }
 
 const PaymentSchema = new Schema<IPayment>(
     {
+        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        storeName: { type: String },
         saleId: { type: String, required: true },
         receiptId: { type: Schema.Types.ObjectId, ref: "Receipt" },
         employeeName: { type: String, required: true },
@@ -51,6 +55,7 @@ PaymentSchema.index({ receiptId: 1 });
 PaymentSchema.index({ createdAt: -1 });
 PaymentSchema.index({ profit: 1 });
 PaymentSchema.index({ discount: 1 }); // ✅ สำหรับรายงานส่วนลด
+PaymentSchema.index({ userId: 1 });
 
 const Payment = mongoose.model<IPayment>("Payment", PaymentSchema);
 export default Payment;

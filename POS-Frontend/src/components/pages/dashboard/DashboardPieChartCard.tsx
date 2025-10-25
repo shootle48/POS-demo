@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface PieItem {
   name: string;
@@ -49,6 +43,8 @@ const DashboardPieChartCard: React.FC<DashboardPieChartCardProps> = ({
               innerRadius={55}
               outerRadius={90}
               paddingAngle={3}
+              cornerRadius={12}
+              labelLine={false}
             >
               {chartData.map((entry, index) => (
                 <Cell

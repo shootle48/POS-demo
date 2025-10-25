@@ -38,6 +38,9 @@ const COLORS = [
 const GRADIENTS = {
   purple: { id: "gPurple", from: "#6C5CE7", to: "rgba(108,92,231,0.12)" },
 };
+
+const LINE_CHART_HEIGHT = 320;
+const PIE_CHART_HEIGHT = 300;
 type RangeKey = "daily" | "weekly" | "monthly";
 const DEFAULT_IMG = "https://cdn-icons-png.flaticon.com/512/2331/2331970.png";
 
@@ -178,29 +181,6 @@ const describePaymentType = (type: string, amount: number) => {
     return "🟢 ขาย";
   }
   return `⚪ ${type}`;
-};
-
-const RADIAN = Math.PI / 180;
-const renderPieValueLabel = (props: any) => {
-  const { cx, cy, midAngle, innerRadius, outerRadius, name, value } = props;
-  if (!outerRadius) return null;
-  const radius = innerRadius + (outerRadius - innerRadius) * 1.05;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const displayValue = `${name}`;
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#0f172a"
-      fontSize={12}
-      fontWeight={600}
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-    >
-      {displayValue}
-    </text>
-  );
 };
 
 const STOCK_TYPE_META: Record<
@@ -687,7 +667,7 @@ export default function HomePage() {
     [purchaseOrders, currentRangeKey]
   );
 
-  const poPie = useMemo(() => {
+  const poPieEntries = useMemo(() => {
     const approvedTotalsByProduct: Record<string, { name: string; value: number }> = {};
     purchaseInRange.forEach((po: any) => {
       const approvedBatches = new Set(
@@ -708,14 +688,14 @@ export default function HomePage() {
         };
       });
     });
-    return Object.values(approvedTotalsByProduct)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
+    return Object.values(approvedTotalsByProduct).sort((a, b) => b.value - a.value);
   }, [purchaseInRange]);
 
+  const poPie = useMemo(() => poPieEntries.slice(0, 8), [poPieEntries]);
+
   const poExpenseInRange = useMemo(
-    () => poPie.reduce((sum, entry) => sum + entry.value, 0),
-    [poPie]
+    () => poPieEntries.reduce((sum, entry) => sum + entry.value, 0),
+    [poPieEntries]
   );
 
   const stockTimeline = useMemo(() => {
@@ -824,8 +804,11 @@ export default function HomePage() {
           <section className="panel card-like area-receipt">
             <h2 className="section-title">{lineTitle}</h2>
             <div className="chart-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineChartData}>
+              <ResponsiveContainer width="100%" height={LINE_CHART_HEIGHT}>
+                <LineChart
+                  data={lineChartData}
+                  margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
+                >
                   <defs>
                     <linearGradient
                       id={GRADIENTS.purple.id}
@@ -861,8 +844,8 @@ export default function HomePage() {
           <section className="panel card-like area-pie1">
             <h2 className="section-title">รายได้ & กำไรรวม ({rangeLabel})</h2>
             <div className="pie-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 32 }}>
                   <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
                   <Legend verticalAlign="bottom" height={48} />
                   <Pie
@@ -892,9 +875,10 @@ export default function HomePage() {
           <section className="panel card-like area-pie2">
             <h2 className="section-title">QC ผ่าน {rangeLabel}</h2>
             <div className="pie-rect">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 24 }}>
                   <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
+                  <Legend verticalAlign="bottom" height={44} />
                   <Pie
                     data={poPie}
                     dataKey="value"
@@ -902,7 +886,7 @@ export default function HomePage() {
                     innerRadius={45}
                     outerRadius={85}
                     labelLine={false}
-                    label={renderPieValueLabel}
+                    paddingAngle={3}
                   >
                     {poPie.map((_, idx) => (
                       <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -929,7 +913,7 @@ export default function HomePage() {
             <div className="kpi-val">{formatCurrency(profitTotal)}</div>
           </div>
           <div className="kpi card-like area-kpi4">
-            <div className="kpi-head">ค่าใช้จ่าย PO (QC ผ่าน {rangeLabel})</div>
+            <div className="kpi-head">ค่าใช้จ่ายใบสั่งซื้อ ({rangeLabel})</div>
             <div className="kpi-val">{formatCurrency(poExpenseInRange)}</div>
           </div>
 
