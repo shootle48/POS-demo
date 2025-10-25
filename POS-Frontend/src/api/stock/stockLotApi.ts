@@ -54,10 +54,16 @@ export const updateQCStatus = async (lotId: string, qcStatus: string, notes: str
 };
 
 /* ✅ ปิดล็อต */
-export const deactivateStockLot = async (lotId: string, token: string) => {
+export const deactivateStockLot = async (lotId: string, token: string, body?: any) => {
     const res = await fetch(`${API_BASE_URL}/stocklots/${lotId}/deactivate`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  if (!res.ok) throw new Error("Deactivate failed");
+  return res.json();
 };

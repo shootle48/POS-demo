@@ -1,0 +1,214 @@
+/* ===============================
+   🧾 Purchase Order Card
+================================= */
+.po-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    margin-bottom: 24px;
+    transition: all 0.25s ease;
+    animation: fadeIn 0.4s ease, slideUp 0.4s ease;
+}
+
+.po-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Header ---------- */
+.po-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.po-header-left h2.po-number {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+    transition: color 0.3s ease;
+}
+
+.po-header-left h2.po-number:hover {
+    color: #007bff;
+    cursor: pointer;
+}
+
+.po-supplier,
+.po-invoice {
+    font-size: 0.95rem;
+    color: #555;
+    margin: 2px 0;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.po-supplier:hover {
+    opacity: 1;
+}
+
+.po-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.po-date {
+    font-size: 0.9rem;
+    color: #666;
+    animation: fadeIn 0.4s ease;
+}
+
+/* ---------- Total ---------- */
+.po-total-section {
+    margin-top: 20px;
+    text-align: right;
+    opacity: 0;
+    animation: fadeIn 0.5s ease 0.3s forwards;
+}
+
+.po-total-line {
+    height: 1px;
+    background: #e0e0e0;
+    margin-bottom: 8px;
+    transform: scaleX(0);
+    transform-origin: right;
+    animation: growLine 0.4s ease 0.3s forwards;
+}
+
+.po-total-label {
+    font-size: 1.1rem;
+    color: #444;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.po-total-value {
+    color: #2e7d32;
+    font-size: 1.25rem;
+    margin-left: 8px;
+    transition: color 0.3s ease;
+}
+
+.po-total-section:hover .po-total-label {
+    color: #222;
+}
+
+.po-total-section:hover .po-total-value {
+    color: #007b55;
+}
+
+/* ---------- ปุ่มภายใน table ---------- */
+.return-item-btn {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-size: 0.85rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.return-item-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: all 0.4s ease;
+}
+
+.return-item-btn:hover::after {
+    left: 100%;
+}
+
+.return-item-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 10px rgba(255, 152, 0, 0.4);
+}
+
+.return-item-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* ---------- Loading Animation ---------- */
+.return-item-btn.loading {
+    background: repeating-linear-gradient(45deg,
+            #ffb74d,
+            #ffb74d 10px,
+            #ff9800 10px,
+            #ff9800 20px);
+    animation: move-bg 1s linear infinite;
+}
+
+@keyframes move-bg {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 20px 0;
+    }
+}
+
+/* ---------- Animations ---------- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes growLine {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .po-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .po-header-right {
+        align-items: flex-start;
+    }
+
+    .po-total-section {
+        text-align: left;
+    }
+}

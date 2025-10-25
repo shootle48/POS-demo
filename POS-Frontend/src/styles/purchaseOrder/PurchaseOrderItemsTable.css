@@ -1,0 +1,349 @@
+.po-items {
+    margin-top: 12px;
+    animation: fadeIn 0.4s ease-in;
+}
+
+.po-items h4 {
+    font-size: 1.15rem;
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 10px;
+    animation: slideDown 0.5s ease;
+}
+
+/* ===== Table Wrapper ===== */
+.po-items-table-wrapper {
+    overflow-x: auto;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    animation: fadeIn 0.5s ease;
+}
+
+/* ===== Table ===== */
+.po-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+    animation: fadeInUp 0.6s ease;
+}
+
+.po-items-table th,
+.po-items-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.po-items-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #444;
+    font-size: 0.9rem;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    animation: fadeInUp 0.3s ease;
+}
+
+/* 🩵 Hover effect for rows */
+.po-row {
+    transition: all 0.25s ease;
+}
+
+.po-row:hover {
+    background: #e8f5ff;
+    transform: translateX(3px);
+}
+
+/* ===== QC Status Colors ===== */
+.qc-status {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+/* ✅ ผ่าน */
+.qc-pass {
+    background: #d4edda;
+    color: #2e7d32;
+}
+
+/* ❌ ไม่ผ่าน */
+.qc-fail {
+    background: #f8d7da;
+    color: #c0392b;
+    animation: pulseFail 1.5s infinite;
+}
+
+/* 🟡 ผ่านบางส่วน */
+.qc-partial {
+    background: #fff3cd;
+    color: #d68910;
+    animation: pulsePartial 2s infinite;
+}
+
+/* ⏳ รอตรวจ */
+.qc-pending {
+    background: #e2e3e5;
+    color: #5a5a5a;
+}
+
+/* ===== Return Button ===== */
+.return-btn {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.25s;
+    font-size: 0.85rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.return-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: all 0.4s ease;
+}
+
+.return-btn:hover::after {
+    left: 100%;
+}
+
+.return-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.35);
+}
+
+.return-btn.loading {
+    background: repeating-linear-gradient(45deg,
+            #ffb74d,
+            #ffb74d 10px,
+            #ff9800 10px,
+            #ff9800 20px);
+    animation: move-bg 1s linear infinite;
+}
+
+/* 🔁 Return Complete */
+.return-btn-returned {
+    background: #bdbdbd;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    cursor: not-allowed;
+    transition: background 0.3s ease;
+}
+
+/* Disable */
+.return-disabled {
+    color: #999;
+}
+
+/* ===== Failed Quantity ===== */
+.qc-failed-cell .failed-highlight {
+    color: #d32f2f;
+    font-weight: 600;
+    animation: blink 1.5s infinite;
+}
+
+/* ===== Modal ===== */
+.qc-detail-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+}
+
+.qc-detail-modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 850px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+    padding: 22px 26px;
+    animation: slideUp 0.4s ease-out;
+}
+
+.qc-detail-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 16px;
+    color: #2d3436;
+    animation: fadeIn 0.5s ease;
+}
+
+.qc-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    animation: fadeIn 0.4s ease;
+}
+
+.qc-detail-table th,
+.qc-detail-table td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: center;
+}
+
+.qc-detail-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #444;
+}
+
+.qc-loading-text {
+    text-align: center;
+    padding: 20px;
+    color: #333;
+    animation: pulseText 1.5s infinite;
+}
+
+.qc-no-data-text {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+}
+
+.qc-modal-close-btn {
+    display: block;
+    margin: 18px auto 0;
+    background: #007bff;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: 0.25s;
+    animation: fadeInUp 0.4s ease;
+}
+
+.qc-modal-close-btn:hover {
+    background: #0056b3;
+}
+
+/* ===== Animation ===== */
+@keyframes move-bg {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 20px 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(25px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulseFail {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(255, 0, 0, 0);
+    }
+}
+
+@keyframes pulsePartial {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(255, 193, 7, 0);
+    }
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+@keyframes pulseText {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}

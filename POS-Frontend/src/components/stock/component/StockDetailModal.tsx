@@ -448,7 +448,7 @@ const StockDetailModal: React.FC<StockDetailModalProps> = ({
               <button
                 type="button"
                 className="stock-import-btn"
-                onClick={() => navigate("/createOrder")}
+                onClick={() => navigate("/create-purchase-order")}
               >
                 นำเข้าสินค้าใหม่
               </button>
