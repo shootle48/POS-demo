@@ -1,13 +1,31 @@
 /* ===============================
+   🌐 Global Reset & Variables
+=================================*/
+:root {
+    --primary: #3b82f6;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #facc15;
+    --neutral: #f3f4f6;
+    --text-dark: #0f172a;
+    --transition: all 0.25s ease-in-out;
+}
+
+body {
+    background: #f9fafb;
+    font-family: "Prompt", sans-serif;
+}
+
+/* ===============================
    🧱 Container
 =================================*/
 .qc-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 20px;
-    background: #f9fafb;
+    padding: 24px;
     box-sizing: border-box;
+    animation: fadeInPage 0.4s ease-in-out;
 }
 
 /* ===============================
@@ -15,61 +33,49 @@
 =================================*/
 .qc-header-wrapper {
     position: sticky;
-    margin-top: 20px;
+    top: 0;
+    z-index: 10;
     background: #fff;
-    z-index: 20;
-    padding: 16px 20px;
     border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    padding: 16px 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    animation: slideDown 0.5s ease;
 }
 
 .qc-header {
-    font-size: 24px;
-    font-weight: bold;
-    display: flex;
-    margin-top: 20px;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: #6c5ce7;
-}
-
-.qc-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--primary);
+    text-align: center;
 }
 
 .qc-subtitle {
-    font-size: 0.95rem;
     color: #475569;
+    font-size: 0.95rem;
+    text-align: center;
+    margin-top: 6px;
 }
 
-/* กลับ */
 .qc-back-btn {
     align-self: flex-start;
     background: transparent;
     border: none;
-    color: #2563eb;
+    color: var(--primary);
     font-size: 0.9rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    transition: color 0.25s ease;
+    transition: var(--transition);
 }
 
 .qc-back-btn:hover {
-    color: #1e40af;
+    color: #1e3a8a;
+    transform: translateX(-2px);
 }
-
-/* ===============================
-   🌟 QC Table - Layout & Style
-================================= */
 
 /* ===============================
    📋 QC Table
@@ -77,43 +83,58 @@
 .qc-table {
     width: 100%;
     border-collapse: collapse;
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    background: #fff;
     font-size: 0.95rem;
-    margin-top: 20px;
+    animation: fadeUp 0.4s ease-in-out;
 }
 
 .qc-table th {
     background: #e0f2fe;
-    color: #1fa1e7;
+    color: #0284c7;
+    font-weight: 600;
     padding: 12px;
     text-align: center;
-    font-weight: 600;
 }
-.qc-table th,
+
 .qc-table td {
-    padding: 10px 14px;
+    padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
     text-align: center;
-    font-size: 14px;
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    transition: background 0.25s ease;
 }
 
-
-.qc-table tr:hover:not(.qc-row-disabled) {
-    background: #f8fbff;
+.qc-row:hover {
+    background: #f8fafc;
+    transition: var(--transition);
 }
 
-.qc-row-disabled {
-    opacity: 0.6;
-    background: #f3f4f6;
-    pointer-events: none;
+.qc-row.qc-pass {
+    background: #ecfdf5;
+    animation: qcGlowSuccess 1.2s ease-in-out;
+}
+
+.qc-row.qc-fail {
+    background: #fef2f2;
+    animation: qcGlowDanger 1.2s ease-in-out;
+}
+
+.qc-row.qc-partial {
+    background: #fffbeb;
+    animation: qcGlowWarning 1.2s ease-in-out;
+}
+
+.qc-row.qc-pending {
+    background: #f9fafb;
 }
 
 /* ===============================
-   📅 Expiry Date Field
-================================= */
-
+   📅 Expiry Date
+=================================*/
 .qc-expiry-field {
     display: flex;
     align-items: center;
@@ -129,95 +150,88 @@
 .qc-expiry-input {
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    padding: 4px 6px;
+    padding: 5px 8px;
     font-size: 14px;
-    transition: border 0.2s;
+    transition: var(--transition);
 }
 
 .qc-expiry-input:focus {
-    border-color: #2563eb;
+    border-color: var(--primary);
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
     outline: none;
+    transform: scale(1.02);
 }
 
 /* ===============================
-   ⚙️ QC Status Dropdown
-================================= */
-
-.qc-table select {
+   ⚙️ QC Status
+=================================*/
+.qc-status-select {
     padding: 6px 8px;
-    border: 1px solid #d1d5db;
     border-radius: 6px;
-    background-color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-    transition: border 0.2s, box-shadow 0.2s;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    transition: var(--transition);
 }
 
-.qc-table select:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+.qc-status-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
     outline: none;
 }
 
+.qc-status-select.ผ่าน {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.qc-status-select.ไม่ผ่าน {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.qc-status-select.ผ่านบางส่วน {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
 /* ===============================
-   📊 Partial Quantity Field
-================================= */
-
-.qc-partial-field {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.qc-total-text {
-    font-weight: 500;
-    color: #111827;
-}
-
+   📊 Failed Quantity
+=================================*/
 .qc-failed-input {
     width: 70px;
-    text-align: right;
-    padding: 4px 6px;
+    padding: 5px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    font-size: 14px;
-    transition: border 0.2s;
+    text-align: right;
+    transition: var(--transition);
 }
 
 .qc-failed-input:focus {
-    border-color: #ef4444;
-    outline: none;
-}
-
-.qc-failed-label {
-    font-size: 13px;
-    color: #b91c1c;
-    font-weight: 500;
+    border-color: var(--danger);
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+    transform: scale(1.03);
 }
 
 /* ===============================
-   💬 Remarks Input
-================================= */
-
+   💬 Remarks
+=================================*/
 .qc-table input[type="text"] {
     width: 100%;
-    padding: 5px 8px;
+    padding: 6px 8px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    font-size: 14px;
-    transition: border 0.2s;
+    transition: var(--transition);
 }
 
 .qc-table input[type="text"]:focus {
-    border-color: #2563eb;
-    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.25);
+    transform: scale(1.02);
 }
 
 /* ===============================
-   📎 Upload Button
-================================= */
-
+   📎 Upload
+=================================*/
 .qc-upload-label {
     display: inline-flex;
     align-items: center;
@@ -229,15 +243,16 @@
     cursor: pointer;
     font-weight: 500;
     font-size: 0.9rem;
-    transition: all 0.25s ease;
+    transition: var(--transition);
 }
 
 .qc-upload-label:hover {
     background: #bae6fd;
+    transform: scale(1.05);
 }
 
 .qc-upload-label.disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -249,100 +264,88 @@
 
 /* ===============================
    💾 Save Button
-================================= */
-
+=================================*/
 .qc-save-btn {
-    background: #3b82f6;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 6px 14px;
-    cursor: pointer;
+    padding: 7px 14px;
     font-size: 14px;
     font-weight: 500;
-    transition: background 0.25s, transform 0.1s;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
 .qc-save-btn:hover:not(.disabled) {
-    background: #2563eb;
-    transform: translateY(-1px);
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(59, 130, 246, 0.25);
 }
 
-.qc-save-btn.disabled {
+/* ===== ปุ่มบันทึกแล้ว ===== */
+.qc-save-btn.saved {
     background: #9ca3af;
+    /* เทา */
+    color: #f3f4f6;
     cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
-/* ===============================
-   🧠 Responsive Layout
-================================= */
-
-@media (max-width: 1024px) {
-
-    .qc-table th,
-    .qc-table td {
-        font-size: 13px;
-        padding: 8px 10px;
-    }
-
-    .qc-failed-input {
-        width: 55px;
-    }
-
-    .qc-save-btn {
-        padding: 5px 10px;
-        font-size: 13px;
-    }
-}
-
-@media (max-width: 768px) {
-    .qc-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    .qc-table th,
-    .qc-table td {
-        font-size: 12px;
-        padding: 6px 8px;
-    }
+.qc-save-btn.saved:hover {
+    background: #9ca3af;
+    transform: none;
 }
 /* ===============================
    ✅ Finalize Section
 =================================*/
 .qc-finalize-section {
-    margin-top: 28px;
+    margin-top: 30px;
     text-align: center;
+    animation: fadeUp 0.4s ease;
 }
 
 .qc-submit-btn {
-    background: #22c55e;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
     color: #fff;
     border: none;
-    padding: 10px 20px;
+    border-radius: 10px;
+    padding: 12px 26px;
     font-size: 1rem;
     font-weight: 600;
-    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: var(--transition);
+}
+
+.qc-submit-btn:hover:not(.disabled) {
+    transform: scale(1.06);
+    box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
 }
 
 .qc-submit-btn.disabled {
     background: #9ca3af;
     cursor: not-allowed;
 }
-
-.qc-submit-btn:hover:not(.disabled) {
-    background: #16a34a;
+/* 🔒 แถวที่ตรวจแล้ว */
+.qc-row.locked {
+    opacity: 0.6;
+    pointer-events: none;
+    background: #f9fafb;
+    position: relative;
 }
 
-.qc-hint {
-    margin-top: 10px;
-    color: #ef4444;
+/* 🔒 Overlay บางเบา */
+.qc-row.locked::after {
+    content: "🔒 ตรวจแล้ว";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: #9ca3af;
     font-weight: 500;
-    font-size: 0.9rem;
 }
+
 
 /* ===============================
    🔄 Loading & Error
@@ -353,68 +356,130 @@
     margin-top: 50px;
     font-size: 1.1rem;
     color: #64748b;
+    animation: fadeInPage 0.6s ease-in-out;
+}
+.qc-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* ===============================
+   🎬 Animations
+=================================*/
+@keyframes fadeInPage {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes qcGlowSuccess {
+    0% {
+        box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+@keyframes qcGlowDanger {
+    0% {
+        box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes qcGlowWarning {
+    0% {
+        box-shadow: 0 0 0 rgba(245, 158, 11, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(245, 158, 11, 0);
+    }
 }
 
 /* ===============================
    📱 Responsive
 =================================*/
-@media (max-width: 768px) {
-    .qc-container {
-        padding: 20px;
-    }
+@media (max-width: 1024px) {
 
     .qc-table th,
     .qc-table td {
-        font-size: 0.85rem;
-        padding: 8px;
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .qc-container {
+        padding: 16px;
+    }
+
+    .qc-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
     }
 
     .qc-submit-btn {
         width: 100%;
     }
 }
-
-.qc-row-disabled {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.qc-upload-label.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.qc-save-btn.disabled,
-.qc-submit-btn.disabled {
-    background-color: #ccc !important;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.qc-save-btn.active,
-.qc-submit-btn.active {
-    background-color: #2ecc71;
-    color: white;
-    font-weight: 600;
-}
-.qc-save-btn.disabled {
-    background-color: #ccc;
-    color: #666;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.qc-upload-label.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.qc-row-disabled {
-    opacity: 0.5;
-    pointer-events: none;
-}
-.qc-save-btn:hover:not(.disabled),
-.qc-submit-btn:hover:not(.disabled) {
-    background-color: #27ae60;
-}
-

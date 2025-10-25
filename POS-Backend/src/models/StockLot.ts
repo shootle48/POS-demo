@@ -1,4 +1,3 @@
-// models/StockLot.ts
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IStockLot extends Document {
@@ -15,16 +14,25 @@ export interface IStockLot extends Document {
     barcode: string;
     purchaseOrderId: mongoose.Types.ObjectId;
     purchaseOrderNumber: string;
+
     quantity: number;
     costPrice: number;
     salePrice?: number;
+
+    // ✅ ใช้เฉพาะสถานะทางคลัง (Inventory)
     status:
     | "สินค้าพร้อมขาย"
     | "สินค้าหมด"
     | "สินค้าเหลือน้อย"
     | "รอตรวจสอบ QC"
-    | "รอคัดออก";
-    qcStatus: "ผ่าน" | "ไม่ผ่าน" | "รอตรวจสอบ";
+    | "รอคัดออก"
+    | "ปิดล็อต";
+
+    // ✅ ใช้เฉพาะสถานะผลตรวจ QC
+    qcStatus: "ผ่าน" | "ไม่ผ่าน" | "ผ่านบางส่วน" | "รอตรวจสอบ";
+
+    // ✅ ใช้เฉพาะสถานะการคืนสินค้า
+    returnStatus?: "ยังไม่คืน" | "คืนบางส่วน" | "คืนทั้งหมด" | "คืนสินค้าไม่ผ่าน QC";
 
     lastRestocked?: Date;
     notes?: string;
@@ -32,7 +40,7 @@ export interface IStockLot extends Document {
     isTemporary?: boolean;
     isStocked?: boolean; // true = เติมแล้ว, false = ยังไม่เติม
 
-    // ✅ ฟิลด์ใหม่: สำหรับการปิดล็อต
+    // ✅ สำหรับการปิดล็อต (Deactivate)
     isClosed?: boolean;
     closedBy?: mongoose.Types.ObjectId;
     closedAt?: Date;
@@ -72,6 +80,7 @@ const StockLotSchema = new Schema<IStockLot>(
         costPrice: { type: Number, default: 0 },
         salePrice: { type: Number, default: 0 },
 
+        // ✅ สถานะหลักในคลัง
         status: {
             type: String,
             enum: [
@@ -80,14 +89,23 @@ const StockLotSchema = new Schema<IStockLot>(
                 "สินค้าเหลือน้อย",
                 "รอตรวจสอบ QC",
                 "รอคัดออก",
+                "ปิดล็อต",
             ],
             default: "รอตรวจสอบ QC",
         },
 
+        // ✅ ผลตรวจ QC
         qcStatus: {
             type: String,
-            enum: ["ผ่าน", "ไม่ผ่าน","ผ่านบางส่วน","รอตรวจสอบ"],
+            enum: ["ผ่าน", "ไม่ผ่าน", "ผ่านบางส่วน", "รอตรวจสอบ"],
             default: "รอตรวจสอบ",
+        },
+
+        // ✅ สถานะการคืนสินค้า
+        returnStatus: {
+            type: String,
+            enum: ["ยังไม่คืน", "คืนบางส่วน", "คืนทั้งหมด", "คืนสินค้าไม่ผ่าน QC"],
+            default: "ยังไม่คืน",
         },
 
         lastRestocked: { type: Date },
@@ -96,7 +114,7 @@ const StockLotSchema = new Schema<IStockLot>(
         isTemporary: { type: Boolean, default: true },
         isStocked: { type: Boolean, default: false },
 
-        // ✅ ฟิลด์ใหม่ (สำหรับ Deactivation Flow)
+        // ✅ สำหรับ Deactivation Flow
         isClosed: { type: Boolean, default: false },
         closedBy: { type: Schema.Types.ObjectId, ref: "User" },
         closedAt: { type: Date },
@@ -106,16 +124,23 @@ const StockLotSchema = new Schema<IStockLot>(
     { timestamps: true }
 );
 
-// ✅ Method: อัปเดตสถานะอัตโนมัติ (เฉพาะ inventory)
+/* =========================================================
+   ✅ METHOD: อัปเดตสถานะสินค้าในคลังแบบอัตโนมัติ
+   - ไม่แตะ status QC หรือ returnStatus
+========================================================= */
 StockLotSchema.methods.updateStatus = async function () {
-    if (["รอตรวจสอบ QC", "รอคัดออก"].includes(this.status)) return;
+    if (["รอตรวจสอบ QC", "รอคัดออก", "ปิดล็อต"].includes(this.status)) return;
 
-    // ✅ เช็คสถานะจำนวนสินค้า
-    if (this.quantity <= 0) this.status = "สินค้าหมด";
-    else if (this.quantity <= 5) this.status = "สินค้าเหลือน้อย";
-    else this.status = "สินค้าพร้อมขาย";
+    // ✅ คำนวณจากจำนวนสินค้า
+    if (this.quantity <= 0) {
+        this.status = "สินค้าหมด";
+    } else if (this.quantity <= 5) {
+        this.status = "สินค้าเหลือน้อย";
+    } else {
+        this.status = "สินค้าพร้อมขาย";
+    }
 
-    // เช็ควันหมดอายุ
+    // ✅ อัปเดตสถานะวันหมดอายุ
     if (this.expiryDate) {
         const now = new Date();
         const exp = new Date(this.expiryDate);
@@ -131,7 +156,6 @@ StockLotSchema.methods.updateStatus = async function () {
     await this.save();
 };
 
-
 // ✅ Indexes สำหรับ performance
 StockLotSchema.index({ productId: 1 });
 StockLotSchema.index({ stockId: 1 });
@@ -139,8 +163,10 @@ StockLotSchema.index({ batchNumber: 1 });
 StockLotSchema.index({ barcode: 1 });
 StockLotSchema.index({ status: 1 });
 StockLotSchema.index({ qcStatus: 1 });
+StockLotSchema.index({ returnStatus: 1 });
 StockLotSchema.index({ isStocked: 1 });
 StockLotSchema.index({ isClosed: 1 });
 StockLotSchema.index({ updatedAt: -1 });
 
-export default mongoose.models.StockLot || mongoose.model<IStockLot>("StockLot", StockLotSchema);
+export default mongoose.models.StockLot ||
+    mongoose.model<IStockLot>("StockLot", StockLotSchema);

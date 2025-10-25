@@ -1,0 +1,207 @@
+.po-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 8px;
+    animation: fadeInButtons 0.5s ease;
+}
+
+/* ปุ่มพื้นฐานทั้งหมด */
+.po-actions button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    transform: scale(0.95);
+    animation: popIn 0.45s ease forwards;
+}
+
+.po-actions button::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.4s ease;
+}
+
+.po-actions button:hover::after {
+    left: 100%;
+}
+
+.po-actions button:active {
+    transform: scale(0.92);
+    filter: brightness(0.9);
+}
+
+/* ✅ ยืนยันรับสินค้า */
+.po-confirm-button {
+    background: linear-gradient(90deg, #28a745, #2ecc71);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.25);
+}
+
+.po-confirm-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 14px rgba(40, 167, 69, 0.4);
+}
+
+/* ❌ ยกเลิก */
+.po-cancel-button {
+    background: linear-gradient(90deg, #dc3545, #e74c3c);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(231, 76, 60, 0.25);
+}
+
+.po-cancel-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 14px rgba(231, 76, 60, 0.4);
+}
+
+/* 🔁 คืนสินค้า */
+.po-return-button {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(255, 152, 0, 0.25);
+}
+
+.po-return-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 14px rgba(255, 152, 0, 0.4);
+}
+
+/* 🔬 ปุ่ม QC */
+.qc-go-button {
+    background: linear-gradient(90deg, #007bff, #5dade2);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(0, 123, 255, 0.25);
+}
+
+.qc-go-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 14px rgba(0, 123, 255, 0.4);
+}
+
+/* 🖨️ พิมพ์ใบสั่งซื้อ */
+.btn-print {
+    background: linear-gradient(90deg, #6c757d, #95a5a6);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(108, 117, 125, 0.25);
+}
+
+.btn-print:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 14px rgba(108, 117, 125, 0.4);
+}
+
+/* ✅ ข้อความผ่าน QC แล้ว */
+.qc-complete-text {
+    font-size: 1rem;
+    color: #2ecc71;
+    font-weight: 600;
+    animation: pulseSuccess 1.8s infinite;
+}
+
+/* 💬 Tooltip */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+    animation: fadeIn 0.3s ease;
+}
+
+.tooltip-text {
+    position: absolute;
+    top: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.tooltip-container:hover .tooltip-text {
+    opacity: 1;
+    transform: translate(-50%, -5px);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+}
+
+/* ================================
+   ✨ Keyframes Animations
+================================ */
+@keyframes fadeInButtons {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes pulseSuccess {
+
+    0%,
+    100% {
+        text-shadow: 0 0 0 rgba(46, 204, 113, 0);
+    }
+
+    50% {
+        text-shadow: 0 0 6px rgba(46, 204, 113, 0.6);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}

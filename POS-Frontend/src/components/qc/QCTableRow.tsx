@@ -13,6 +13,7 @@ interface QCTableRowProps {
     saving: boolean;
     isFinalized: boolean;
     handleSubmitQC: (item: any) => Promise<void>;
+    rowLoading?: string | null;
 }
 
 const QCTableRow: React.FC<QCTableRowProps> = ({
@@ -26,9 +27,11 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
     saving,
     isFinalized,
     handleSubmitQC,
+    rowLoading,
 }) => {
     const batchNumber = item.batchNumber;
 
+    // ✅ normalize ข้อมูล QC แต่ละล็อต
     const normalizedQC = {
         ...qc,
         status: qc.status || "รอตรวจสอบ",
@@ -37,47 +40,63 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
         failedQuantity: qc.failedQuantity ?? 0,
     };
 
-    const handleChangeStatus = (status: string) => {
+    // ✅ ถ้ามี _id และสถานะเป็น "ผ่าน", "ไม่ผ่าน", "ผ่านบางส่วน" → ห้ามแก้ไข
+    const isLocked =
+        Boolean(normalizedQC._id) &&
+        ["ผ่าน", "ไม่ผ่าน", "ผ่านบางส่วน"].includes(normalizedQC.status);
+
+    // ✅ helper function สำหรับอัปเดตข้อมูล
+    const handleChange = (field: string, value: any) => {
+        if (isLocked) return;
         setQcData((prev) => ({
             ...prev,
-            [batchNumber]: { ...prev[batchNumber], status },
+            [batchNumber]: { ...prev[batchNumber], [field]: value },
         }));
     };
 
-    const handleChangeRemarks = (remarks: string) => {
-        setQcData((prev) => ({
-            ...prev,
-            [batchNumber]: { ...prev[batchNumber], remarks },
-        }));
-    };
-
-    const handleChangeExpiry = (date: string) => {
-        setQcData((prev) => ({
-            ...prev,
-            [batchNumber]: { ...prev[batchNumber], expiryDate: date },
-        }));
-    };
-
-    const handleChangeFailed = (value: string) => {
-        const val = Math.max(0, Math.min(Number(value), item.quantity));
-        setQcData((prev) => ({
-            ...prev,
-            [batchNumber]: { ...prev[batchNumber], failedQuantity: val },
-        }));
-    };
-
+    // ✅ แนบไฟล์
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isLocked) return;
         setFiles((prev) => ({
             ...prev,
             [batchNumber]: Array.from(e.target.files || []),
         }));
     };
 
-    const isSaveDisabled =
-        disabled || isFinalized || saving || normalizedQC.status === "รอตรวจสอบ";
+    // ✅ เงื่อนไขเปิด/ปิดช่อง input
+    const expiryDisabled = isLocked || normalizedQC.status !== "ผ่าน" || disabled || isFinalized;
+    const failedDisabled =
+        isLocked ||
+        (normalizedQC.status !== "ผ่านบางส่วน" && normalizedQC.status !== "ไม่ผ่าน") ||
+        disabled ||
+        isFinalized;
+
+    // ✅ ตรวจว่า field พร้อมบันทึกไหม
+    const canSave = () => {
+        if (isLocked || disabled || isFinalized || saving) return false;
+        const total = item.quantity || 0;
+        if (normalizedQC.status === "รอตรวจสอบ") return false;
+        if (normalizedQC.status === "ผ่าน" && !normalizedQC.expiryDate) return false;
+        if (
+            normalizedQC.status === "ผ่านบางส่วน" &&
+            (!normalizedQC.failedQuantity || normalizedQC.failedQuantity >= total)
+        )
+            return false;
+        return true;
+    };
+
+    // ✅ สีแถวเปลี่ยนตามสถานะ
+    const rowClass =
+        normalizedQC.status === "ผ่าน"
+            ? "qc-row qc-pass"
+            : normalizedQC.status === "ไม่ผ่าน"
+                ? "qc-row qc-fail"
+                : normalizedQC.status === "ผ่านบางส่วน"
+                    ? "qc-row qc-partial"
+                    : "qc-row qc-pending";
 
     return (
-        <tr className={disabled ? "qc-row-disabled" : ""}>
+        <tr className={`${rowClass} ${isLocked ? "locked" : ""}`}>
             <td>{item.productName}</td>
             <td>{batchNumber}</td>
 
@@ -87,10 +106,11 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
                     <FontAwesomeIcon icon={faCalendarAlt} className="qc-expiry-icon" />
                     <input
                         type="date"
-                        disabled={disabled || isFinalized}
+                        disabled={expiryDisabled}
                         value={normalizedQC.expiryDate}
-                        onChange={(e) => handleChangeExpiry(e.target.value)}
-                        className="qc-expiry-input"
+                        onChange={(e) => handleChange("expiryDate", e.target.value)}
+                        className={`qc-expiry-input ${!expiryDisabled && !normalizedQC.expiryDate ? "qc-required" : ""
+                            }`}
                     />
                 </div>
             </td>
@@ -98,9 +118,10 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
             {/* ✅ สถานะ QC */}
             <td>
                 <select
-                    disabled={disabled || isFinalized}
+                    disabled={isLocked || disabled || isFinalized}
                     value={normalizedQC.status}
-                    onChange={(e) => handleChangeStatus(e.target.value)}
+                    onChange={(e) => handleChange("status", e.target.value)}
+                    className={`qc-status-select ${normalizedQC.status}`}
                 >
                     <option value="รอตรวจสอบ">รอตรวจสอบ</option>
                     <option value="ผ่าน">ผ่าน</option>
@@ -120,10 +141,11 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
                     type="number"
                     min={0}
                     max={item.quantity}
-                    disabled={disabled || isFinalized}
+                    disabled={failedDisabled}
                     value={normalizedQC.failedQuantity}
-                    onChange={(e) => handleChangeFailed(e.target.value)}
-                    className="qc-failed-input"
+                    onChange={(e) => handleChange("failedQuantity", e.target.value)}
+                    className={`qc-failed-input ${!failedDisabled && normalizedQC.failedQuantity > 0 ? "qc-input-active" : ""
+                        }`}
                 />
             </td>
 
@@ -131,24 +153,26 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
             <td>
                 <input
                     type="text"
-                    disabled={disabled || isFinalized}
+                    disabled={isLocked || disabled || isFinalized}
                     placeholder="หมายเหตุ..."
                     value={normalizedQC.remarks}
-                    onChange={(e) => handleChangeRemarks(e.target.value)}
+                    onChange={(e) => handleChange("remarks", e.target.value)}
+                    className="qc-remark-input"
                 />
             </td>
 
             {/* ✅ แนบรูป */}
             <td>
                 <label
-                    className={`qc-upload-label ${disabled || isFinalized ? "disabled" : ""}`}
+                    className={`qc-upload-label ${isLocked || disabled || isFinalized ? "disabled" : ""
+                        }`}
                 >
                     <FontAwesomeIcon icon={faUpload} /> เลือกรูป
                     <input
                         type="file"
                         multiple
                         hidden
-                        disabled={disabled || isFinalized}
+                        disabled={isLocked || disabled || isFinalized}
                         onChange={handleFileUpload}
                     />
                 </label>
@@ -160,14 +184,35 @@ const QCTableRow: React.FC<QCTableRowProps> = ({
             {/* ✅ ปุ่มบันทึก */}
             <td>
                 <button
-                    className={`qc-save-btn ${isSaveDisabled ? "disabled" : ""}`}
-                    disabled={isSaveDisabled}
-                    onClick={() => handleSubmitQC(item)}
+                    className={`qc-save-btn ${isLocked
+                            ? "saved"
+                            : rowLoading === batchNumber
+                                ? "disabled"
+                                : canSave()
+                                    ? "active"
+                                    : "disabled"
+                        }`}
+                    disabled={
+                        isLocked ||
+                        rowLoading === batchNumber ||
+                        !canSave() ||
+                        normalizedQC.status === "รอตรวจสอบ"
+                    }
+                    onClick={() => !isLocked && handleSubmitQC(item)}
                 >
-                    <FontAwesomeIcon icon={faCheck} />{" "}
-                    {normalizedQC._id && normalizedQC.status !== "รอตรวจสอบ"
-                        ? "บันทึกแล้ว"
-                        : "บันทึก"}
+                    {isLocked ? (
+                        <>
+                            <FontAwesomeIcon icon={faCheck} /> บันทึกแล้ว
+                        </>
+                    ) : rowLoading === batchNumber ? (
+                        <>
+                            <span className="qc-spinner" /> กำลังบันทึก...
+                        </>
+                    ) : (
+                        <>
+                            <FontAwesomeIcon icon={faCheck} /> บันทึก
+                        </>
+                    )}
                 </button>
             </td>
         </tr>

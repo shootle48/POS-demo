@@ -13,8 +13,8 @@ import { getStockData } from "../../api/stock/stock";
 import "../../styles/page/Notification.css";
 
 interface StockItem {
-    _id: string;            // id ของ stock
-    productId?: string;     // ✅ id ของ product จริง
+    _id: string;
+    productId?: string;
     barcode: string;
     name: string;
     imageUrl: string;
@@ -30,8 +30,6 @@ interface StockItem {
     costPrice?: number;
     salePrice?: number;
 }
-
-
 
 interface NotificationDropdownProps {
     notificationOpen: boolean;
@@ -55,8 +53,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     const navigate = useNavigate();
 
     const normalizeStockItem = (raw: any): StockItem => ({
-        _id: raw._id, // id ของ stock
-        productId: raw.productId?._id || raw.productId || "", // ✅ id ของ product จริง
+        _id: raw._id,
+        productId: raw.productId?._id || raw.productId || "",
         barcode: raw.barcode ?? raw.productId?.barcode ?? "",
         name: raw.name ?? raw.productId?.name ?? "ไม่พบชื่อสินค้า",
         imageUrl: raw.imageUrl ?? raw.productId?.imageUrl ?? "",
@@ -89,7 +87,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         salePrice: Number(raw.salePrice ?? raw.productId?.salePrice ?? 0),
     });
 
-
     const isLow = (item: StockItem) =>
         item.totalQuantity <= (item.threshold ?? 5);
 
@@ -104,7 +101,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             const lowList = normalized.filter(isLow);
 
             setLowStockItems(lowList);
-            setNotificationCount(lowList.length); // ✅ แสดงจำนวนสินค้าที่เหลือน้อยทั้งหมด
         } catch (err) {
             console.error("❌ โหลด stock ไม่สำเร็จ", err);
         }
@@ -129,28 +125,17 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             setLowStockItems((prev) => {
                 const exists = prev.some((i) => i._id === id);
 
-                // 🆕 ถ้าสินค้าเพิ่งเหลือน้อยและยังไม่มีในรายการ → เพิ่มเข้า list
                 if (nowLow && !exists) {
                     console.log("🔔 สินค้าเหลือน้อยใหม่:", updated.name);
-                    setNotificationCount((c) => c + 1);
                     return [...prev, updated];
                 }
 
-                // 🔁 ถ้ายังเหลือน้อยอยู่ → อัปเดตข้อมูล
                 if (nowLow && exists) {
                     return prev.map((i) => (i._id === id ? updated : i));
                 }
 
-                // ✅ ถ้าสต็อกกลับมาปกติ → เอาออกจาก list (แต่ไม่ลด count ถ้ายังไม่ได้อยู่ใน prev)
                 if (!nowLow && exists) {
                     console.log("✅ สินค้ากลับมาปกติ:", updated.name);
-
-                    // ป้องกัน double decrement: ลด count เฉพาะถ้ายังมีใน list จริง
-                    setNotificationCount((c) => {
-                        const stillHasItem = prev.some((x) => x._id === id);
-                        return stillHasItem ? Math.max(c - 1, 0) : c;
-                    });
-
                     return prev.filter((i) => i._id !== id);
                 }
 
@@ -170,6 +155,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             disconnectSocket();
         };
     }, []);
+
+    // ✅ sync notificationCount ตามจำนวน lowStockItems จริงเสมอ
+    useEffect(() => {
+        setNotificationCount(lowStockItems.length);
+    }, [lowStockItems]);
 
     // ปิด dropdown เมื่อคลิกข้างนอก
     useEffect(() => {

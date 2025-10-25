@@ -13,12 +13,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    animation: fadeInDown 0.5s ease-in-out;
 }
 
 .notification-banner::before {
     content: "⚡";
     font-size: 18px;
 }
+
 .create-order-container-suppliers {
     max-width: 900px;
     margin: 40px auto;
@@ -28,16 +30,18 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
     font-family: "Prompt", "Inter", sans-serif;
     color: #1f2937;
-    animation: fadeIn 0.3s ease-in-out;
+    animation: fadeInPage 0.6s ease-in-out;
 }
 
 .create-order-header-suppliers {
     text-align: center;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: #2563eb;
     margin-bottom: 24px;
     letter-spacing: 0.5px;
+    position: relative;
+    animation: textGlow 2.5s infinite ease-in-out;
 }
 
 /* ===============================
@@ -47,6 +51,7 @@
     display: flex;
     flex-direction: column;
     margin-bottom: 16px;
+    animation: fadeInUp 0.5s ease forwards;
 }
 
 .form-group-suppliers label {
@@ -70,6 +75,7 @@
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     outline: none;
+    transform: scale(1.02);
 }
 
 /* ===============================
@@ -86,6 +92,7 @@
     border-radius: 12px;
     border: 1px solid #e5e7eb;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    animation: fadeInUp 0.5s ease 0.2s forwards;
 }
 
 .form-inline-item {
@@ -93,15 +100,8 @@
     flex-direction: column;
     min-width: 150px;
     flex: 1;
+    animation: popIn 0.4s ease-in-out;
 }
-
-.form-inline-item label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #374151;
-    margin-bottom: 4px;
-}
-
 .form-inline-item input {
     height: 38px;
     padding: 6px 10px;
@@ -110,11 +110,11 @@
     font-size: 0.95rem;
     transition: all 0.2s ease-in-out;
 }
-
 .form-inline-item input:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     outline: none;
+    transform: scale(1.03);
 }
 
 /* ✅ ปุ่มเพิ่มสินค้า */
@@ -134,11 +134,27 @@
     cursor: pointer;
     transition: all 0.25s ease-in-out;
     white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+}
+
+.add-item-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: left 0.4s ease;
+}
+
+.add-item-btn:hover::after {
+    left: 100%;
 }
 
 .add-item-btn:hover {
-    background: linear-gradient(90deg, #0284c7, #2563eb);
-    transform: translateY(-1px);
+    transform: scale(1.05);
     box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
 }
 
@@ -151,18 +167,7 @@
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-}
-
-.order-items-list h3 {
-    margin-bottom: 12px;
-    color: #1e3a8a;
-    font-size: 1.1rem;
-}
-
-.order-items-list ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    animation: fadeInUp 0.5s ease 0.3s forwards;
 }
 
 .order-item-row {
@@ -174,25 +179,28 @@
     padding: 10px 14px;
     margin-bottom: 10px;
     border-radius: 8px;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s ease-in-out;
+    animation: fadeInUp 0.4s ease forwards;
 }
 
 .order-item-row:hover {
     background: #f0f9ff;
     border-color: #93c5fd;
+    transform: translateX(4px);
 }
 
+/* ปุ่มลบ */
 .remove-item-btn {
     background: none;
     border: none;
     color: #ef4444;
     cursor: pointer;
     font-size: 1rem;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.25s ease-in-out;
 }
 
 .remove-item-btn:hover {
-    transform: scale(1.2);
+    transform: scale(1.25);
     color: #dc2626;
 }
 
@@ -211,11 +219,28 @@
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.25s ease-in-out;
+    animation: fadeInUp 0.6s ease 0.4s forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.create-po-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: all 0.4s ease;
+}
+
+.create-po-btn:hover::after {
+    left: 100%;
 }
 
 .create-po-btn:hover {
-    background: linear-gradient(90deg, #059669, #047857);
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.03);
     box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
 }
 
@@ -233,7 +258,8 @@
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.2s ease-in-out;
+    animation: fadeIn 0.3s ease-in-out;
+    backdrop-filter: blur(3px);
 }
 
 .order-popup-content {
@@ -244,27 +270,21 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     width: 90%;
     max-width: 380px;
-    animation: slideUp 0.25s ease-in-out;
+    animation: zoomIn 0.35s ease-out;
 }
 
 .order-icon {
     font-size: 3rem;
     color: #22c55e;
     margin-bottom: 12px;
+    animation: iconPop 0.45s ease-in-out;
 }
 
 .order-icon-error {
     font-size: 3rem;
     color: #ef4444;
     margin-bottom: 12px;
-}
-
-.order-popup.success .order-popup-content {
-    border-top: 5px solid #22c55e;
-}
-
-.order-popup.error .order-popup-content {
-    border-top: 5px solid #ef4444;
+    animation: iconPop 0.45s ease-in-out;
 }
 
 .popup-close-btn {
@@ -276,44 +296,21 @@
     padding: 8px 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.25s ease;
 }
 
 .popup-close-btn:hover {
     background: #1d4ed8;
+    transform: scale(1.05);
 }
 
 /* ===============================
-   🌐 Responsive Design
+   ✨ Keyframes Animations
 =================================*/
-@media (max-width: 768px) {
-    .create-order-container-suppliers {
-        padding: 20px;
-    }
-
-    .form-inline-suppliers {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-
-    .form-inline-item {
-        width: 100%;
-    }
-
-    .add-item-btn,
-    .create-po-btn {
-        width: 100%;
-    }
-}
-
-/* ===============================
-   ✨ Animations
-=================================*/
-@keyframes fadeIn {
+@keyframes fadeInPage {
     from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translateY(10px);
     }
 
     to {
@@ -322,7 +319,19 @@
     }
 }
 
-@keyframes slideUp {
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
     from {
         opacity: 0;
         transform: translateY(20px);
@@ -331,5 +340,61 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes iconPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.3);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes textGlow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 0 rgba(37, 99, 235, 0);
+    }
+
+    50% {
+        text-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
     }
 }

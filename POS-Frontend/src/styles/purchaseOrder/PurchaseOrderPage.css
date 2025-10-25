@@ -9,10 +9,12 @@
     padding: 20px;
     background: #f9fafb;
     box-sizing: border-box;
+    animation: fadeInPage 0.6s ease-in-out;
 }
 
 .po-header-wrapper {
     position: sticky;
+    top: 0;
     margin-top: 20px;
     background: #fff;
     z-index: 20;
@@ -21,7 +23,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    animation: slideDown 0.5s ease-in-out;
 }
 
 .po-header {
@@ -32,6 +35,8 @@
     justify-content: center;
     gap: 10px;
     color: #6c5ce7;
+    position: relative;
+    animation: textGlow 2.5s infinite ease-in-out;
 }
 
 /* =============================
@@ -41,47 +46,29 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    animation: fadeInUp 0.8s ease-in-out;
 }
 
 /* =============================
-   Card
+   PO Card Info
 ============================= */
-/* ===============================
-   🧾 Purchase Order Card
-=============================== */
-
-.po-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    transition: var(--transition);
+.po-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0;
+    transition: color 0.3s ease;
 }
 
-.po-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-}
-.po-total-section {
-    margin-top: 12px;
-    text-align: right;
-    padding: 12px 16px;
-    background: #f9fafb;
-    border-radius: 8px;
-    border-top: 1px solid #ddd;
+.po-number:hover {
+    color: #007bff;
 }
 
-.po-total-line {
-    height: 1px;
-    background-color: #ddd;
-    margin-bottom: 8px;
-}
-
-.po-total-label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
+.po-date {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-top: 0.2rem;
+    animation: fadeIn 0.6s ease-in;
 }
 
 .po-total-value {
@@ -89,221 +76,11 @@
     font-size: 1.2rem;
     font-weight: 700;
     color: #007b55;
-}
-/* ===== Header ===== */
-.po-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 0.75rem;
-    margin-bottom: 1rem;
+    transition: color 0.3s ease;
 }
 
-.po-number {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--primary);
-    margin: 0;
-}
-
-.po-date {
-    font-size: 0.9rem;
-    color: var(--text-light);
-    margin-top: 0.2rem;
-}
-
-/* ===== PO Info Section ===== */
-.po-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem 2rem;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
-}
-
-.po-info p {
-    margin: 0;
-    color: var(--text-dark);
-}
-
-.po-info strong {
-    color: var(--primary);
-}
-
-/* ===== Total Summary ===== */
-.po-total {
-    font-weight: 600;
-    font-size: 1rem;
-    margin-top: 0.75rem;
-    text-align: right;
-    color: #0f172a;
-    border-top: 2px solid #e2e8f0;
-    padding-top: 0.5rem;
-}
-
-/* ===== QC Status (in info) ===== */
-.po-info p:last-child {
-    font-weight: 500;
-}
-
-.po-info p:last-child::before {
-    content: "🧪 ";
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    .po-card {
-        padding: 1rem;
-    }
-
-    .po-card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-
-    .po-info {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .po-total {
-        text-align: left;
-    }
-}
-
-/* =============================
-   Status Badge
-============================= */
-.po-status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #fff;
-    min-width: 120px;
-    text-align: center;
-}
-
-.po-status-badge.pending {
-    background-color: #facc15;
-    /* yellow */
-    color: #1f2937;
-}
-
-.po-status-badge.received {
-    background-color: #34d399;
-    /* green */
-}
-
-.po-status-badge.cancelled {
-    background-color: #f87171;
-    /* red */
-}
-
-.po-status-badge.qc-pending-return {
-    background-color: #fb923c;
-    /* orange */
-}
-
-.po-status-badge.qc-returned {
-    background-color: #9ca3af;
-    /* gray */
-}
-
-/* =============================
-   PO Info
-============================= */
-
-/* QC Status */
-.qc-status {
-    padding: 3px 8px;
-    border-radius: 6px;
-    margin-left: 8px;
-    font-size: 0.85rem;
-}
-
-.qc-รอตรวจสอบ {
-    background: #fef08a;
-    color: #92400e;
-}
-
-.qc-ผ่าน {
-    background: #bbf7d0;
-    color: #065f46;
-}
-
-.qc-ไม่ผ่าน {
-    background: #fecaca;
-    color: #991b1b;
-}
-
-.po-empty {
-    margin-top: 14px;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 12px;
-
-}
-
-/* =============================
-   Items Table
-============================= */
-/* ===============================
-   📋 ตารางรายการสินค้าในใบสั่งซื้อ
-=============================== */
-
-.po-items {
-    margin-top: 1.5rem;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1rem 1.5rem;
-    overflow-x: auto;
-}
-
-.po-items h4 {
-    margin-bottom: 1rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* ===== Table structure ===== */
-.po-items-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-}
-
-.po-items-table th {
-    background: #e0f2fe;
-    color: #1fa1e7;
-    padding: 12px;
-    text-align: center;
-    font-weight: 600;
-}
-
-.po-items-table td {
-    text-align: center;
-    padding: 8px 10px;
-    border-bottom: 1px solid #eee;
-    color: var(--text-dark);
-}
-
-.po-items-table tbody tr:hover {
-    background: #f8fafc;
-    transition: var(--transition);
-}
-
-/* รวมทั้งหมดแถวท้าย */
-.po-items-table tfoot td {
-    background: #f1f5f9;
-    font-weight: bold;
-    padding: 10px;
-    border-top: 2px solid #ddd;
+.po-total-value:hover {
+    color: #00a86b;
 }
 
 /* ===== QC Status Badge ===== */
@@ -316,6 +93,7 @@
     text-align: center;
     min-width: 90px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.5s ease;
 }
 
 /* ✅ ผ่าน */
@@ -330,6 +108,7 @@
     background: #fee2e2;
     color: #b91c1c;
     border: 1px solid #ef4444;
+    animation: pulseFail 1.5s infinite;
 }
 
 /* 🧪 ผ่านบางส่วน / ตรวจบางส่วน */
@@ -337,6 +116,7 @@
     background: #fef9c3;
     color: #92400e;
     border: 1px solid #facc15;
+    animation: pulsePartial 2s infinite;
 }
 
 /* ⏳ รอตรวจ */
@@ -346,202 +126,9 @@
     border: 1px solid #cbd5e1;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    .po-items-table thead {
-        display: none;
-    }
-
-    .po-items-table,
-    .po-items-table tbody,
-    .po-items-table tr,
-    .po-items-table td {
-        display: block;
-        width: 100%;
-    }
-
-    .po-items-table tr {
-        background: #fff;
-        margin-bottom: 0.75rem;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 10px;
-    }
-
-    .po-items-table td {
-        text-align: left;
-        padding: 6px 0;
-        border: none;
-    }
-
-    .po-items-table td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--text-light);
-        display: block;
-    }
-}
-
 /* =============================
-   Actions
+   Warehouse Info
 ============================= */
-.po-actions {
-    margin-top: 16px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.po-actions button,
-.po-actions select {
-    font-size: 0.9rem;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s ease;
-}
-
-/* Confirm (เขียว) */
-.qc-go-button {
-    background: #16a34a;
-    color: #fff;
-}
-.qc-go-button:hover {
-    background: #3cb96a;
-    color: #fff;
-}
-.po-actions .po-confirm-button {
-    background: #16a34a;
-    color: #fff;
-}
-
-.po-actions .po-confirm-button:hover {
-    background: #3cb96a;
-    color: #fff;
-}
-
-.po-actions .btn-print {
-    background: #007bff;
-    color: #fff;
-}
-
-.po-actions .btn-print:hover {
-    background: #4694e7;
-    color: #fff;
-}
-
-.return-btn {
-    background: linear-gradient(135deg, #ff5858, #ff7b7b);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 10px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-}
-
-.return-btn:hover {
-    background: linear-gradient(135deg, #ff3b3b, #ff6666);
-    transform: scale(1.05);
-}
-
-.return-disabled {
-    color: #aaa;
-    font-size: 0.9rem;
-}
-/* ===============================
-   🟢 Status Badge
-=================================*/
-
-
-.status-pending {
-    background: #fbbf24;
-}
-
-.status-received {
-    background: #10b981;
-}
-
-.status-qc-passed {
-    background: #22c55e;
-
-}
-
-.status-qc-pending-return {
-    background: #f59e0b;
-}
-
-.status-qc-returned {
-    background: #9ca3af;
-}
-
-.status-cancelled {
-    background: #ef4444;
-}
-
-
-.qc-status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-align: center;
-    min-width: 90px;
-    margin-left: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-/* ❌ ไม่ผ่าน */
-.qc-fail {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #ef4444;
-}
-
-/* 🧪 ผ่านบางส่วน / ตรวจบางส่วน */
-.qc-partial {
-    background: #fef9c3;
-    color: #92400e;
-    border: 1px solid #facc15;
-}
-.status-qc-partial{
-        background: #fef9c3;
-            color: #92400e;
-            border: 1px solid #facc15;
-}
-/* ⏳ รอตรวจ */
-
-/* Cancel (แดง) */
-.po-cancel-button {
-    background: #ef4444;
-    color: white;
-}
-
-.po-cancel-button:hover {
-    background: #dc2626;
-}
-
-/* Return (ส้ม) */
-.po-return-button {
-    background: #f97316;
-    color: white;
-}
-
-.po-return-button:hover {
-    background: #ea580c;
-}
-
-/* Select สำหรับ QC */
-.po-actions select {
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    color: #1e293b;
-}
-
 .warehouse-display {
     background: #eef6ff;
     border-left: 4px solid #007bff;
@@ -549,30 +136,28 @@
     border-radius: 8px;
     margin-top: 10px;
     font-size: 0.95rem;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease 0.3s forwards;
 }
 
-/* =========================
+/* =============================
    Popup Overlay
-========================= */
+============================= */
 .po-popup-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     background: rgba(15, 23, 42, 0.55);
-    /* dark blur */
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.25s ease-in-out;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease-in-out;
     z-index: 2200;
 }
 
-/* =========================
+/* =============================
    Popup Box
-========================= */
+============================= */
 .po-popup-box {
     background: #ffffff;
     border-radius: 14px;
@@ -581,102 +166,213 @@
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
     max-width: 420px;
     width: 90%;
-    animation: slideUp 0.3s ease;
-
+    animation: zoomIn 0.4s ease;
+    transform-origin: center;
 }
 
-/* =========================
-   Icon
-========================= */
+/* =============================
+   Icon & Message
+============================= */
 .po-popup-icon {
     font-size: 46px;
     margin-bottom: 16px;
+    animation: iconPop 0.5s ease-in-out;
 }
 
 .po-popup-icon.success {
     color: #22c55e;
 }
 
-/* เขียว */
 .po-popup-icon.error {
     color: #ef4444;
 }
 
-/* แดง */
 .po-popup-icon.confirm {
     color: #3b82f6;
 }
 
-/* น้ำเงิน */
-
-/* =========================
-   Message
-========================= */
 .po-popup-message {
     font-size: 18px;
     margin-bottom: 22px;
     line-height: 1.5;
     color: #1f2937;
+    animation: fadeIn 0.4s ease;
 }
 
-/* =========================
-   Action Buttons
-========================= */
+/* =============================
+   Popup Buttons
+============================= */
 .po-popup-actions {
     display: flex;
     justify-content: center;
     gap: 12px;
+    margin-top: 8px;
 }
 
-.po-popup-confirm {
-    background: #22c55e;
-    color: #fff;
+.po-popup-confirm,
+.po-popup-cancel,
+.po-popup-close {
     border: none;
     border-radius: 8px;
     padding: 10px 18px;
     cursor: pointer;
     font-size: 15px;
-    transition: background 0.2s;
+    color: #fff;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.po-popup-confirm::after,
+.po-popup-cancel::after,
+.po-popup-close::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: all 0.4s ease;
+}
+
+.po-popup-confirm:hover::after,
+.po-popup-cancel:hover::after,
+.po-popup-close:hover::after {
+    left: 100%;
+}
+
+/* ปุ่มยืนยัน */
+.po-popup-confirm {
+    background: #22c55e;
 }
 
 .po-popup-confirm:hover {
     background: #16a34a;
+    transform: scale(1.05);
 }
 
+/* ปุ่มยกเลิก */
 .po-popup-cancel {
     background: #ef4444;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    cursor: pointer;
-    font-size: 15px;
-    transition: background 0.2s;
 }
 
 .po-popup-cancel:hover {
     background: #dc2626;
+    transform: scale(1.05);
 }
 
+/* ปุ่มปิด */
 .po-popup-close {
     background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 15px;
-    transition: background 0.2s;
 }
 
 .po-popup-close:hover {
     background: #2563eb;
+    transform: scale(1.05);
 }
 
-
-/* =========================
+/* =============================
    Animations
-========================= */
+============================= */
+@keyframes fadeInPage {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-15px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes iconPop {
+    0% {
+        transform: scale(0);
+    }
+
+    60% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes textGlow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 0 rgba(108, 92, 231, 0);
+    }
+
+    50% {
+        text-shadow: 0 0 10px rgba(108, 92, 231, 0.6);
+    }
+}
+
+@keyframes pulseFail {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes pulsePartial {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px rgba(250, 204, 21, 0);
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

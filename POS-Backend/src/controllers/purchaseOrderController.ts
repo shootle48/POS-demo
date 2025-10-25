@@ -4,12 +4,14 @@ import PurchaseOrder from "../models/PurchaseOrder";
 import { verifyToken } from "../utils/auth";
 import { generateInvoiceNumber } from "../utils/generateInvoice";
 import { generateBatchNumber } from "../utils/generateBatch";
-
+import QC from "../models/QualityControl";
 import Stock from "../models/Stock";
 import StockLot from "../models/StockLot";
 import Supplier from "../models/Supplier";
 import Warehouse from "../models/Warehouse";
 import Product from "../models/Product";
+import { updatePurchaseOrderStatus } from "../utils/purchaseOrderStatusHelper";
+
 import StockTransaction from "../models/StockTransaction";
 
 /* ========================================================
@@ -24,27 +26,72 @@ async function ensureObjectIdOrByName(model: any, value: any, nameField: string)
 }
 
 /* ==========================
-   ดึงรายการ Purchase Orders ทั้งหมด
+   📦 ดึงรายการ Purchase Orders ทั้งหมด
 ========================== */
 export const getPurchaseOrders = async (_: Request, res: Response): Promise<void> => {
     try {
         const orders = await PurchaseOrder.find()
             .populate("supplierId")
-            .populate("location") // คลัง
+            .populate("location")
             .populate("createdBy")
             .populate("updatedBy")
             .populate("items.productId", "name barcode")
             .populate("items.stockId")
-            .populate("stockLots", "_id batchNumber status qcStatus expiryDate")
+            .populate("stockLots", "_id batchNumber status qcStatus expiryDate quantity remainingQty")
+            .sort({ createdAt: -1 })
+            .lean(); // ✅ แปลงเป็น plain JS object จะได้แก้ไขได้
 
-            .sort({ createdAt: -1 });
+        // 🧩 ดึง batchNumber ทั้งหมดจากทุก PO
+        const allBatchNumbers = orders.flatMap((po: any) =>
+            po.stockLots?.map((lot: any) => lot.batchNumber)
+        );
 
-        res.status(200).json({ success: true, message: "ดึงรายการ PO สำเร็จ", data: orders });
+        // ✅ ดึงข้อมูล QC ที่มี batchNumber อยู่ใน PO เหล่านี้
+        const qcRecords = await QC.find(
+            { batchNumber: { $in: allBatchNumbers } },
+            "batchNumber failedQuantity totalQuantity status"
+        ).lean();
+
+        // 🧠 map qcRecord เป็น object { batchNumber: failedQuantity }
+        const qcMap = new Map<string, any>();
+        qcRecords.forEach((qc) => {
+            qcMap.set(qc.batchNumber, {
+                failedQuantity: qc.failedQuantity || 0,
+                qcStatus: qc.status,
+                totalQuantity: qc.totalQuantity || 0,
+            });
+        });
+
+        // ✅ merge failedQuantity เข้าไปในแต่ละ lot
+        for (const po of orders) {
+            if (po.stockLots?.length) {
+                po.stockLots = po.stockLots.map((lot: any) => {
+                    const qc = qcMap.get(lot.batchNumber);
+                    return {
+                        ...lot,
+                        failedQuantity: qc?.failedQuantity ?? 0,
+                        qcStatus: qc?.qcStatus || lot.qcStatus,
+                        totalQuantity: qc?.totalQuantity ?? lot.quantity ?? 0,
+                    };
+                });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "ดึงรายการ PO สำเร็จ (พร้อมข้อมูลจำนวนไม่ผ่าน QC)",
+            data: orders,
+        });
     } catch (error) {
-        console.error("Get PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while fetching POs" });
+        console.error("❌ Get PO Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while fetching POs",
+            error: (error as Error).message,
+        });
     }
 };
+
 
 /* ==========================
    📄 ดึงรายละเอียด PO ตาม ID
@@ -328,14 +375,16 @@ export const confirmPurchaseOrder = async (req: Request, res: Response): Promise
 };
 
 
+
 /* ========================================================
    🔁 RETURN PURCHASE ORDER (FULL RETURN)
-   → ใช้ตอน QC ไม่ผ่าน และผู้ใช้กดคืนทั้งใบ (คืนเฉพาะที่ไม่ผ่าน)
+   → ใช้ตอน QC ไม่ผ่าน และผู้ใช้กดคืนทั้งใบ (คืนเฉพาะล็อตที่ไม่ผ่าน)
 ======================================================== */
 export const returnPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
         const token = req.header("Authorization")?.split(" ")[1];
+
         if (!token) {
             res.status(401).json({ success: false, message: "Unauthorized" });
             return;
@@ -347,96 +396,84 @@ export const returnPurchaseOrder = async (req: Request, res: Response): Promise<
             return;
         }
 
+        const userId = (decoded as any).userId;
         const po = await PurchaseOrder.findById(id);
+
         if (!po) {
             res.status(404).json({ success: false, message: "ไม่พบ PurchaseOrder" });
             return;
         }
 
-        // ✅ ตรวจสอบว่าสถานะสามารถคืนได้หรือไม่
-        if (
-            ![
-                "ไม่ผ่าน QC - รอส่งคืนสินค้า",
-                "QC ผ่านบางส่วน",
-                "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว",
-            ].includes(po.status)
-        ) {
-            res
-                .status(400)
-                .json({ success: false, message: `PO นี้ไม่สามารถคืนสินค้าได้ (${po.status})` });
+        // ✅ ตรวจสอบว่าสถานะ PO สามารถคืนได้
+        if (![
+            "ไม่ผ่าน QC - รอส่งคืนสินค้า",
+            "QC ผ่านบางส่วน",
+            "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว"
+        ].includes(po.status)) {
+            res.status(400).json({
+                success: false,
+                message: `PO นี้ไม่สามารถคืนสินค้าได้ (${po.status})`,
+            });
             return;
         }
 
-        // ✅ ดึง StockLots ที่เกี่ยวข้อง
-        const lots = await StockLot.find({ batchNumber: { $in: po.items.map((i: any) => i.batchNumber) } });
+        const lots = await StockLot.find({
+            batchNumber: { $in: po.items.map((i: any) => i.batchNumber) },
+        });
 
         let totalReturnedValue = 0;
         const returnHistory: any[] = [];
 
         for (const item of po.items as any[]) {
             const lot = lots.find((l) => l.batchNumber === item.batchNumber);
-
-            // 🔍 คืนเฉพาะล็อตที่ "ไม่ผ่าน" เท่านั้น
             if (!lot || lot.qcStatus !== "ไม่ผ่าน") continue;
 
-            const quantity = item.quantity;
-            const value = quantity * (item.costPrice || 0);
-            totalReturnedValue += value;
+            const returnQty = item.quantity;
+            const returnValue = returnQty * (item.costPrice || 0);
+            totalReturnedValue += returnValue;
 
-            // ✅ Mark คืนในรายการสินค้า
             item.isReturned = true;
-            item.returnedQuantity = quantity;
-            item.returnedValue = value;
+            item.returnedQuantity = returnQty;
+            item.returnedValue = returnValue;
 
-            // ✅ Log ประวัติการคืน
+            lot.returnStatus = "คืนสินค้าไม่ผ่าน QC";
+            lot.status = "รอคัดออก";
+            lot.isActive = false;
+            lot.isTemporary = true;
+            lot.remainingQty = 0;
+            lot.closedBy = userId;
+            lot.closedAt = new Date();
+            await lot.save();
+
             returnHistory.push({
                 productId: item.productId,
                 productName: item.productName,
                 batchNumber: item.batchNumber,
-                returnedQuantity: quantity,
-                returnedValue: value,
+                returnedQuantity: returnQty,
+                returnedValue: returnValue,
                 returnedAt: new Date(),
-                processedBy: (decoded as any).userId,
+                processedBy: userId,
             });
-
-            // ✅ อัปเดตสถานะล็อต
-            lot.status = "รอคัดออก";
-            lot.isActive = false;
-            lot.isTemporary = true;
-            await lot.save();
         }
 
-        // ✅ อัปเดตยอดรวมหลังคืน
-        const totalAmount = po.items.reduce(
-            (sum: number, i: any) => sum + (i.total || 0),
-            0
-        );
+        const totalAmount = po.items.reduce((sum: number, i: any) => sum + (i.total || 0), 0);
         po.totalReturnedValue = totalReturnedValue;
         po.totalAmountAfterReturn = totalAmount - totalReturnedValue;
 
-        // ✅ เก็บประวัติการคืน
         if (!(po as any).returnHistory) (po as any).returnHistory = [];
         po.returnHistory.push(...returnHistory);
 
-        // ✅ ตรวจสอบว่าคืนครบทุก “ล็อตที่ไม่ผ่าน” แล้วหรือไม่
-        const allFailLotsReturned = lots
-            .filter((l) => l.qcStatus === "ไม่ผ่าน")
-            .every((l) => l.isActive === false);
-
-        // ✅ อัปเดตสถานะ PO
-        po.status = allFailLotsReturned
-            ? "ไม่ผ่าน QC - คืนสินค้าแล้ว"
-            : "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว";
-
         po.returnedAt = new Date();
-        po.updatedBy = (decoded as any).userId;
-
+        po.updatedBy = userId;
         po.markModified("items");
         await po.save();
 
+        // ✅ อัปเดตสถานะ PO อัตโนมัติหลังคืน
+        await updatePurchaseOrderStatus(po._id);
+
         res.status(200).json({
             success: true,
-            message: `✅ คืนสินค้าทั้งใบเรียบร้อยแล้ว (คืนเฉพาะที่ QC ไม่ผ่าน, รวม ${returnHistory.length} รายการ, มูลค่า ${totalReturnedValue.toLocaleString()}฿)`,
+            message: `✅ คืนสินค้าทั้งใบสำเร็จ (เฉพาะล็อตที่ QC ไม่ผ่าน รวม ${returnHistory.length} รายการ มูลค่า ${totalReturnedValue.toLocaleString()}฿)`,
             data: {
                 poId: po._id,
                 status: po.status,
@@ -454,16 +491,18 @@ export const returnPurchaseOrder = async (req: Request, res: Response): Promise<
         });
     }
 };
+
+
 /* ========================================================
-   🔁 RETURN PURCHASE ORDER ITEM (ปรับปรุงพร้อมยอดคืน)
+   🔁 RETURN PURCHASE ORDER ITEM (คืนเฉพาะสินค้าที่ไม่ผ่าน QC)
 ======================================================== */
 export const returnPurchaseItem = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { id } = req.params; // PO ID
-        const { itemId, batchNumber, quantity } = req.body;
+        const { id } = req.params;
+        const { itemId, batchNumber } = req.body;
 
-        if ((!itemId && !batchNumber) || !quantity) {
-            res.status(400).json({ success: false, message: "กรุณาระบุ batchNumber หรือ itemId และ quantity" });
+        if (!itemId && !batchNumber) {
+            res.status(400).json({ success: false, message: "กรุณาระบุ batchNumber หรือ itemId" });
             return;
         }
 
@@ -479,18 +518,16 @@ export const returnPurchaseItem = async (req: Request, res: Response): Promise<v
             return;
         }
 
+        const userId = (decoded as any).userId;
         const po = await PurchaseOrder.findById(id);
+
         if (!po) {
-            res.status(404).json({ success: false, message: "ไม่พบใบสั่งซื้อ" });
+            res.status(404).json({ success: false, message: "ไม่พบ PurchaseOrder" });
             return;
         }
 
-        // ✅ ค้นหา item ตาม batchNumber หรือ itemId
         const item = (po.items as any[]).find(
-            (i) =>
-                i._id?.toString() === itemId ||
-                i.batchNumber === batchNumber ||
-                i.barcode === batchNumber
+            (i) => i._id?.toString() === itemId || i.batchNumber === batchNumber
         );
 
         if (!item) {
@@ -498,74 +535,81 @@ export const returnPurchaseItem = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        if (quantity > item.quantity) {
-            res.status(400).json({ success: false, message: "จำนวนที่คืนมากกว่าที่รับไว้" });
+        const qcRecord = await QC.findOne({ batchNumber: item.batchNumber });
+        if (!qcRecord) {
+            res.status(400).json({ success: false, message: `ไม่พบข้อมูล QC สำหรับล็อต ${item.batchNumber}` });
             return;
         }
 
-        /* ======================================================
-           ✅ บันทึกข้อมูลการคืนสินค้า
-        ====================================================== */
-        const returnValue = quantity * item.costPrice; // มูลค่าที่คืน
+        const lot = await StockLot.findOne({ batchNumber: item.batchNumber });
+        if (!lot) {
+            res.status(404).json({ success: false, message: "ไม่พบล็อตสินค้านี้" });
+            return;
+        }
+
+        const canReturn = qcRecord.status === "ไม่ผ่าน" || qcRecord.status === "ผ่านบางส่วน";
+        if (!canReturn) {
+            res.status(400).json({
+                success: false,
+                message: `❌ ล็อต ${item.batchNumber} ไม่สามารถคืนได้ (สถานะ: ${qcRecord.status})`,
+            });
+            return;
+        }
+
+        const failedQty =
+            qcRecord.status === "ไม่ผ่าน"
+                ? item.quantity
+                : Math.min(qcRecord.failedQuantity ?? 0, item.quantity);
+
+        if (failedQty <= 0) {
+            res.status(400).json({ success: false, message: "ไม่มีจำนวนสินค้าที่ไม่ผ่าน QC ให้คืน" });
+            return;
+        }
+
+        const returnValue = failedQty * item.costPrice;
         item.isReturned = true;
-        item.returnedQuantity = quantity;
+        item.returnedQuantity = failedQty;
         item.returnedValue = returnValue;
 
-        // ✅ เพิ่ม log การคืนสินค้า (เก็บไว้ใน purchaseOrder)
         if (!(po as any).returnHistory) (po as any).returnHistory = [];
-        (po as any).returnHistory.push({
+        po.returnHistory.push({
             productId: item.productId,
             productName: item.productName,
             batchNumber: item.batchNumber,
-            returnedQuantity: quantity,
+            returnedQuantity: failedQty,
             returnedValue: returnValue,
             returnedAt: new Date(),
-            processedBy: (decoded as any).userId,
+            processedBy: userId,
         });
 
-        /* ======================================================
-           ✅ อัปเดตสถานะ StockLot
-        ====================================================== */
-        const lot = await StockLot.findOne({ batchNumber: item.batchNumber });
-        if (lot) {
-            lot.status = "รอคัดออก";
-            lot.isActive = false;
-            await lot.save();
-        }
+        lot.returnStatus = failedQty === item.quantity ? "คืนทั้งหมด" : "คืนบางส่วน";
+        lot.status = failedQty === item.quantity ? "ปิดล็อต" : "สินค้าพร้อมขาย";
+        lot.isActive = failedQty !== item.quantity;
+        lot.isTemporary = failedQty === item.quantity;
+        lot.remainingQty = Math.max((lot.remainingQty ?? lot.quantity) - failedQty, 0);
+        lot.closedBy = userId;
+        lot.closedAt = new Date();
+        await lot.save();
 
-        /* ======================================================
-           ✅ อัปเดตยอดรวมในใบ PO
-        ====================================================== */
         const totalReturnedValue = (po.items as any[])
             .filter((i: any) => i.isReturned)
             .reduce((sum: number, i: any) => sum + (i.returnedValue || 0), 0);
 
-        const newTotalAmount = po.items.reduce(
-            (sum: number, i: any) => sum + (i.total || 0),
-            0
-        );
+        const totalPOValue = po.items.reduce((sum: number, i: any) => sum + (i.total || 0), 0);
 
         po.totalReturnedValue = totalReturnedValue;
-        po.totalAmountAfterReturn = newTotalAmount - totalReturnedValue;
+        po.totalAmountAfterReturn = totalPOValue - totalReturnedValue;
         po.returnedAt = new Date();
-        po.updatedBy = (decoded as any).userId;
-
-        // ✅ เช็กสถานะว่าคืนครบทุกชิ้นแล้วไหม
-        const allReturned = po.items.every((i: any) => i.isReturned === true);
-        po.status = allReturned
-            ? "ไม่ผ่าน QC - คืนสินค้าทั้งหมดแล้ว"
-            : "ไม่ผ่าน QC - คืนสินค้าบางส่วนแล้ว";
-
-        // ✅ แจ้ง Mongoose ว่า array items ถูกแก้ไข
+        po.updatedBy = userId;
         po.markModified("items");
         await po.save();
 
-        /* ======================================================
-           ✅ Response กลับพร้อมข้อมูลครบทุกชิ้น
-        ====================================================== */
+        // ✅ อัปเดตสถานะ PO อัตโนมัติหลังคืนสินค้า
+        await updatePurchaseOrderStatus(po._id);
+
         res.status(200).json({
             success: true,
-            message: `✅ คืนสินค้า "${item.productName}" (${quantity} ชิ้น, มูลค่า ${returnValue.toLocaleString()}฿) สำเร็จแล้ว`,
+            message: `✅ คืนสินค้า "${item.productName}" (${failedQty} ชิ้น, มูลค่า ${returnValue.toLocaleString()}฿) สำเร็จแล้ว`,
             data: {
                 poId: po._id,
                 items: po.items.map((i: any) => ({
@@ -585,7 +629,7 @@ export const returnPurchaseItem = async (req: Request, res: Response): Promise<v
             },
         });
     } catch (error) {
-        console.error("❌ Return Partial Item Error:", error);
+        console.error("❌ Return Item Error:", error);
         res.status(500).json({
             success: false,
             message: "เกิดข้อผิดพลาดขณะคืนสินค้า",
@@ -593,7 +637,6 @@ export const returnPurchaseItem = async (req: Request, res: Response): Promise<v
         });
     }
 };
-
 
 /* ========================================================
    ❌ CANCEL PURCHASE ORDER

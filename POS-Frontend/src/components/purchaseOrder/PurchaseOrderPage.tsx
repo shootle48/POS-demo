@@ -28,6 +28,7 @@ const PurchaseOrderPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [popup, setPopup] = useState<PopupState | null>(null);
+    const [search, setSearch] = useState("");
 
     const loadOrders = async () => {
         try {
@@ -49,21 +50,36 @@ const PurchaseOrderPage: React.FC = () => {
         loadOrders();
     }, []);
 
-    if (loading) return <p className="order-loading">⏳ กำลังโหลดข้อมูล...</p>;
-    if (error) return <p className="order-error">{error}</p>;
+    const filteredOrders = orders.filter(
+        (po) =>
+            po.purchaseOrderNumber.toLowerCase().includes(search.toLowerCase()) ||
+            po.supplierCompany.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
         <div className="display">
             <div className="po-container">
                 <div className="po-header-wrapper">
                     <h1 className="po-header">📦 รายการใบสั่งซื้อสินค้า</h1>
+
+                    <input
+                        type="text"
+                        placeholder="🔍 ค้นหาใบสั่งซื้อ หรือชื่อผู้จัดจำหน่าย..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="search-input"
+                    />
                 </div>
 
-                {orders.length === 0 ? (
-                    <p className="po-empty">ยังไม่มีข้อมูลใบสั่งซื้อ</p>
+                {loading ? (
+                    <p className="order-loading">⏳ กำลังโหลดข้อมูล...</p>
+                ) : error ? (
+                    <p className="order-error">{error}</p>
+                ) : filteredOrders.length === 0 ? (
+                    <p className="po-empty">ไม่พบข้อมูลใบสั่งซื้อ</p>
                 ) : (
                     <div className="po-list">
-                        {orders.map((po) => (
+                        {filteredOrders.map((po) => (
                             <PurchaseOrderCard
                                 key={po._id}
                                 po={po}

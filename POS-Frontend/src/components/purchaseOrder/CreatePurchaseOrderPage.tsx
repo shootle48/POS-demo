@@ -69,6 +69,15 @@ const CreatePurchaseOrderPage: React.FC = () => {
             const supplierNameValue =
                 prod.supplier?.companyName || prod.supplierName || prod.supplier || "";
 
+            // ✅ ถ้ามีสินค้าในตะกร้าอยู่แล้ว → ตรวจสอบว่าซัพพลายเออร์ตรงกันไหม
+            if (items.length > 0 && supplierId && supplierId !== supplierIdValue) {
+                setMessage("⚠️ ใบสั่งซื้อนี้เป็นของผู้จำหน่ายรายอื่น กรุณาสร้างใบใหม่หากต้องการเพิ่มสินค้า");
+                setPopupType("error");
+                // เคลียร์ state notification เพื่อไม่ preload ผิด
+                navigate(location.pathname, { replace: true });
+                return;
+            }
+
             // ✅ ตั้งค่า supplier
             setSupplierId(supplierIdValue);
             setSupplierCompany(supplierNameValue);
@@ -78,28 +87,30 @@ const CreatePurchaseOrderPage: React.FC = () => {
                 setWarehouseId(prod.locationId);
             }
 
-            // ✅ โหลดสินค้าและคลัง
+            // ✅ โหลดสินค้าและคลังที่เกี่ยวข้อง
             fetchProductsBySupplier(supplierIdValue);
             fetchWarehouseByProduct(prod._id || prod.productId);
 
-            // ✅ เพิ่มสินค้านี้เข้าใบสั่งซื้อทันที (10 ชิ้น)
-            const newItem = {
-                productId: prod.productId, // ✅ ใช้ id ของ Product แท้
-                productName: prod.name,
-                barcode: prod.barcode,
-                quantity: 10,
-                costPrice: prod.costPrice || 0,
-                salePrice: prod.salePrice || 0,
-            };
-            setItems([newItem]);
+            // ✅ คำนวณจำนวนแนะนำ (อย่างน้อย 10 ชิ้น หรือ 2 เท่าของ threshold)
+            const suggestedQty = Math.max(10, (prod.threshold ?? 5) * 2);
 
-            // ✅ แสดงข้อความธรรมดาว่ามาจากแจ้งเตือน
-            setNotificationMsg(`📢 เลือกสินค้าจากการแจ้งเตือน: ${prod.name} (10 ชิ้น)`);
+            // ✅ preload ข้อมูลสินค้า แต่ยังไม่เพิ่มเข้าตะกร้า
+            setProductId(prod.productId || prod._id);
+            setCostPrice(prod.costPrice || 0);
+            setSalePrice(prod.salePrice || 0);
+            setQuantity(suggestedQty);
 
-            // เคลียร์ state
+            // ✅ แสดงข้อความมาจากแจ้งเตือน
+            setNotificationMsg(
+                `📢 เลือกสินค้าจากการแจ้งเตือน: ${prod.name} (แนะนำสั่งซื้อ ${suggestedQty} ชิ้น)`
+            );
+
+            // ✅ เคลียร์ state หลังโหลดข้อมูล
             navigate(location.pathname, { replace: true });
         }
     }, [location.state]);
+
+
 
 
     const fetchProductsBySupplier = async (id: string) => {
@@ -133,14 +144,29 @@ const CreatePurchaseOrderPage: React.FC = () => {
             setPopupType("error");
             return;
         }
+
         const selected = products.find((p) => p._id === productId);
         if (!selected) return;
+
         const exists = items.find((i) => i.productId === productId);
         if (exists) {
             setMessage("⚠️ มีสินค้านี้ในรายการแล้ว");
             setPopupType("error");
             return;
         }
+
+        // ✅ ตรวจสอบ supplier consistency
+        if (items.length > 0) {
+            const currentSupplier = supplierId;
+            const firstItemSupplier = supplierId; // supplier ของใบนี้
+            if (currentSupplier !== firstItemSupplier) {
+                setMessage("🚫 ไม่สามารถเพิ่มสินค้าได้: Supplier ไม่ตรงกับในรายการ");
+                setPopupType("error");
+                return;
+            }
+        }
+
+        // ✅ ถ้า supplier ตรงกัน -> เพิ่มสินค้าได้
         setItems((prev) => [
             ...prev,
             {
@@ -152,7 +178,11 @@ const CreatePurchaseOrderPage: React.FC = () => {
                 salePrice,
             },
         ]);
+
+        // ✅ เคลียร์ banner การแจ้งเตือน
+        setNotificationMsg("");
     };
+
 
     const handleRemoveItem = (id: string) => {
         setItems(items.filter((item) => item.productId !== id));
