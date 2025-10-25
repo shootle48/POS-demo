@@ -35,17 +35,17 @@ import { renewToken } from "./api/auth/auth";
 import "./App.css";
 
 // ✅ Interceptor ตรวจสอบ response
-// axios.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     const status = error.response?.status;
-//     if (status === 401 || status === 403) {
-//       localStorage.removeItem("token");
-//       window.location.href = "/";
-//     }
-//     return Promise.reject(error);
-//   }
-// );
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      localStorage.removeItem("token");
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ✅ ฟังก์ชันเช็ค token หมดอายุ
 const isTokenValid = (token: string | null): boolean => {

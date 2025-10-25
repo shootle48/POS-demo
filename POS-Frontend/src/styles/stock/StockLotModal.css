@@ -10,152 +10,243 @@
     backdrop-filter: blur(4px);
 }
 
-/* ===== Modal ===== */
+/* ===== Modal Container ===== */
 .stocklots-modal-content {
     background: #fff;
-    border-radius: 12px;
+    border-radius: 14px;
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px;
     max-height: 85vh;
-    overflow: hidden;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-    padding: 18px 22px;
     display: flex;
     flex-direction: column;
     animation: slideUp 0.25s ease-out;
+    overflow: hidden;
+    /* กันไม่ให้ modal เลื่อนทั้งกล่อง */
 }
 
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ===== Title (Fixed Header) ===== */
 .stocklots-modal-title {
-    font-size: 1.3rem;
-    font-weight: 600;
+    background: linear-gradient(90deg, #007bff, #00b4d8);
+    color: white;
     text-align: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1.5px solid #eee;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 14px 20px;
+    border-bottom: 2px solid #e0e0e0;
+    flex-shrink: 0;
+    /* ห้ามเลื่อน */
 }
 
-/* ===== Table Container ===== */
+/* ===== Table Wrapper ===== */
 .stocklot-table-wrapper {
     flex: 1;
     overflow-y: auto;
-    max-height: 60vh;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    /* ✅ เลื่อนเฉพาะส่วนข้อมูลในตาราง */
+    background: #fafafa;
+    padding: 0 20px 10px;
 }
 
 /* ===== Table ===== */
 .stocklot-modal-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.88rem;
-    table-layout: auto;
-    /* ✅ ให้ขนาดคอลัมน์ยืดตามเนื้อหา */
+    font-size: 0.95rem;
+    table-layout: fixed;
 }
 
-.stocklot-modal-table th,
-.stocklot-modal-table td {
-    border-bottom: 1px solid #ebebeb;
-    padding: 8px 10px;
-    text-align: center;
-    vertical-align: middle;
-}
-
-.stocklot-modal-table th {
+.stocklot-modal-table thead th {
     position: sticky;
     top: 0;
-    background-color: #f8f9fb;
-    font-weight: 600;
+    /* ✅ หัวตารางไม่เลื่อน */
+    background: #f1f5fb;
     color: #333;
-    z-index: 2;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px;
+    border-bottom: 2px solid #ddd;
+    z-index: 5;
 }
 
-.stocklot-modal-table td:first-child {
-    width: 40px;
-    /* ลำดับ */
-}
-
-.stocklot-modal-table td:nth-child(2) {
-    word-break: break-all;
-    /* ✅ Batch ยาวจะตัดบรรทัด */
-    min-width: 180px;
-}
-
-.stocklot-modal-table td:nth-child(3),
-.stocklot-modal-table td:nth-child(4),
-.stocklot-modal-table td:nth-child(5) {
-    min-width: 95px;
-}
-
-.stocklot-modal-table tbody tr:nth-child(even) {
-    background-color: #fafafa;
+.stocklot-modal-table tbody td {
+    text-align: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
 }
 
 .stocklot-modal-table tbody tr:hover {
-    background-color: #eef7ff;
-    transition: background-color 0.2s ease;
-}
-
-/* ===== QC Status ===== */
-.stocklots-qc-status {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 6px;
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
-
-.qc-pass {
-    background-color: #2ecc71;
-}
-
-.qc-fail {
-    background-color: #e74c3c;
-}
-
-.qc-pending {
-    background-color: #f39c12;
-}
-
-.qc-partial {
-    background-color: #3498db;
-}
-
-.qc-unknown {
-    background-color: #95a5a6;
+    background: #f9fbff;
 }
 
 /* ===== Buttons ===== */
-.danger-btn {
-    background-color: #e74c3c;
-    color: white;
+.close-btn {
+    margin: 12px auto 18px;
+    padding: 8px 22px;
+    background: #555;
+    color: #fff;
     border: none;
     border-radius: 6px;
-    padding: 6px 10px;
+    font-size: 0.95rem;
     cursor: pointer;
-    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+    background: #333;
+}
+
+.danger-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
     transition: 0.2s;
 }
 
 .danger-btn:hover {
-    background-color: #c0392b;
+    background: #b0212c;
 }
 
-.close-btn {
-    align-self: center;
-    margin-top: 12px;
-    background-color: #34495e;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
+.closed-label {
+    color: #777;
+}
+
+/* ===== QC Status ===== */
+.stocklots-qc-status {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.qc-pass {
+    background: #d4edda;
+    color: #155724;
+}
+
+.qc-fail {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.qc-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.qc-partial {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.qc-unknown {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+/* ===== Popup Overlay ===== */
+.stocklots-modal-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+/* ===== Popup Content ===== */
+.stocklots-modal-popup-content {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 25px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.25s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.stocklots-modal-popup-content h3 {
+    text-align: center;
+    margin-bottom: 14px;
+    color: #333;
+}
+
+.stocklots-modal-popup-select,
+.stocklots-modal-popup-textarea {
+    width: 100%;
+    margin-top: 6px;
+    margin-bottom: 14px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 0.95rem;
+}
+
+.stocklots-modal-popup-textarea {
+    min-height: 80px;
+    resize: none;
+}
+
+.stocklots-popup-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.stocklots-confirm-btn {
+    background: #007bff;
+    color: white;
     padding: 8px 18px;
-    font-size: 0.9rem;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
-    transition: 0.2s ease;
+    transition: 0.2s;
 }
 
-.close-btn:hover {
-    background-color: #2c3e50;
+.stocklots-confirm-btn:hover {
+    background: #0056b3;
+}
+
+.stocklots-cancel-btn {
+    background: #ccc;
+    color: #333;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.stocklots-cancel-btn:hover {
+    background: #aaa;
 }
 
 /* ===== Scrollbar ===== */
@@ -164,41 +255,10 @@
 }
 
 .stocklot-table-wrapper::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
 }
 
 .stocklot-table-wrapper::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.4);
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    .stocklots-modal-content {
-        width: 95%;
-        padding: 14px;
-    }
-
-    .stocklot-modal-table th,
-    .stocklot-modal-table td {
-        font-size: 0.8rem;
-        padding: 6px;
-    }
-
-    .stocklots-modal-title {
-        font-size: 1.15rem;
-    }
-}
-
-/* ===== Animation ===== */
-@keyframes slideUp {
-    from {
-        transform: translateY(40px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+    background: rgba(0, 0, 0, 0.35);
 }

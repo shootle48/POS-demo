@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 ========================================================= */
 export const createQCRecord = async (formData: FormData, token: string) => {
     try {
-        const res = await axios.post(`${API_URL}/qc`, formData, {
+        const res = await axios.post(`${API_URL}/qc/create`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
                 Authorization: `Bearer ${token}`,

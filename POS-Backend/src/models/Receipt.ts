@@ -4,8 +4,6 @@ export interface IReceiptItem {
     barcode: string;
     name: string;
     price: number;
-    costPrice?: number;
-    cost?: number;
     quantity: number;
     subtotal: number;
     discount?: number; // ✅ ส่วนลดต่อสินค้า (ถ้ามี)

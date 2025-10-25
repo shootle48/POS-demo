@@ -15,6 +15,6 @@ router.get("/barcode/:barcode", getStockLotsByBarcode);
 router.get("/filter", filterStockLots);
 router.patch("/:lotId/expiry", updateExpiryDate);
 router.put("/:lotId/qc", updateQCStatus);
-router.put("/:lotId/deactivate", deactivateStockLot);
+router.patch("/:lotId/deactivate", deactivateStockLot);
 
 export default router;

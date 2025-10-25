@@ -92,7 +92,6 @@ export const getReceiptByPaymentId = async (req: AuthRequest, res: Response): Pr
     }
 };
 
-
 // 📊 สรุปยอด (คงเดิม)
 export const getReceiptSummary = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -233,4 +232,3 @@ export const deleteReceipt = async (req: AuthRequest, res: Response): Promise<vo
         });
     }
 };
-

@@ -85,7 +85,7 @@ const PurchaseOrderPrintModal = ({ po, onClose }: any) => {
                         </div>
                         <div className="signature-block">
                             <p>ลงชื่อ .............................................</p>
-                            <p>(ผู้อนุมัติ)</p>
+                            <p>(ผู้จัดส่ง)</p>
                             <p>วันที่ ........../........../..........</p>
                         </div>
                         <div className="qr-block">

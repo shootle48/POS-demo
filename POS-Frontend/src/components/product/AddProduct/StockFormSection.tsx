@@ -4,8 +4,14 @@ interface Props {
     stockData: any;
     suppliers: any[];
     warehouses: any[];
-    handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
-    handleUnitChange: (index: number, field: "name" | "totalQuantity", value: any) => void;
+    handleInputChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => void;
+    handleUnitChange: (
+        index: number,
+        field: "name" | "totalQuantity",
+        value: any
+    ) => void;
     addUnit: () => void;
     removeUnit: (index: number) => void;
     setShowWarehouseModal: (open: boolean) => void;
@@ -23,7 +29,7 @@ const StockFormSection: React.FC<Props> = ({
     handleUnitChange,
     addUnit,
     removeUnit,
-    setShowWarehouseModal
+    setShowWarehouseModal,
 }) => {
     return (
         <div className="add-product-form-column">
@@ -70,7 +76,6 @@ const StockFormSection: React.FC<Props> = ({
             </div>
 
             {/* หน่วยสินค้า */}
-            {/* หน่วยสินค้า */}
             <div className="add-product-form-group">
                 <label className="add-product-form-label">หน่วยสินค้า:</label>
 
@@ -85,15 +90,12 @@ const StockFormSection: React.FC<Props> = ({
                             <option value="">-- เลือกหน่วย --</option>
                             <option value="ชิ้น">ชิ้น</option>
                             <option value="ตัว">ตัว</option>
-                            <option value="โหล">โหล</option>
+                            <option value="คู่">คู่</option>
+                            <option value="เครื่อง">เครื่อง</option>
+                            <option value="กล่อง">กล่อง</option>
                             <option value="แพ็ค">แพ็ค</option>
                             <option value="ลัง">ลัง</option>
-                            <option value="กล่อง">กล่อง</option>
-                            <option value="ขวด">ขวด</option>
-                            <option value="ถุง">ถุง</option>
-                            <option value="กิโลกรัม">กิโลกรัม</option>
-                            <option value="กรัม">กรัม</option>
-                            <option value="ลิตร">ลิตร</option>
+                            <option value="เซ็ต">เซ็ต</option>
                         </select>
 
                         {/* จำนวนต่อหน่วย */}
@@ -118,11 +120,13 @@ const StockFormSection: React.FC<Props> = ({
                     </div>
                 ))}
 
-                <button type="button" onClick={addUnit} className="add-unit-btn">
-                    เพิ่มหน่วย
-                </button>
+                {/* 🚫 แสดงปุ่มเพิ่มเฉพาะเมื่อยังไม่มีหน่วย */}
+                {(!stockData.units || stockData.units.length === 0) && (
+                    <button type="button" onClick={addUnit} className="add-unit-btn">
+                        เพิ่มหน่วย
+                    </button>
+                )}
             </div>
-
 
             {/* Supplier */}
             <div className="add-product-form-group">
@@ -177,6 +181,7 @@ const StockFormSection: React.FC<Props> = ({
                     className="add-product-form-input"
                 />
             </div>
+
             <div className="add-product-form-group">
                 <label className="add-product-form-label">บันทึกเพิ่มเติม:</label>
                 <textarea

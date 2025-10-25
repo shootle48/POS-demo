@@ -325,4 +325,3 @@ export const processRefund = async (req: AuthRequest, res: Response): Promise<vo
         res.status(500).json({ success: false, message: "Server error", error });
     }
 };
-

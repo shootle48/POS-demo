@@ -214,170 +214,127 @@ export const getDashboardStats = async (
     }
 };
 
-// ======================= Aggregate Sales (ตามบิลสุทธิ-ต้นทุน) =======================
+// ======================= Aggregate Sales =======================
 export async function aggregateSales(
-  start: Date,
-  end: Date,
-  groupBy: "hour" | "day" | "month",
-  ownerId: Types.ObjectId
+    start: Date,
+    end: Date,
+    groupBy: "hour" | "day"
 ) {
-  // ดึงราคาทุนล่าสุดจากสต็อกไว้เป็น fallback
-  const stocks = await Stock.find({ userId: ownerId }).lean();
-  const stockMap = new Map(
-    stocks.map((s) => [
-      s.barcode,
-      { costPrice: Number(s.costPrice || 0), salePrice: Number(s.salePrice || 0) },
-    ])
-  );
+    const stocks = await Stock.find({}).lean();
+    const stockMap = new Map(
+        stocks.map((s) => [
+            s.barcode,
+            { costPrice: s.costPrice || 0, salePrice: s.salePrice || 0 },
+        ])
+    );
 
-  // ดึงใบเสร็จทั้งช่วง (ไม่ unwind) เพื่อคำนวณสุทธิ/กำไรต่อบิล
-  const receipts = await Receipt.find({
-    userId: ownerId,
-    timestamp: { $gte: start, $lte: end },
-  }).lean();
+    const receipts = await Receipt.aggregate([
+        { $match: { timestamp: { $gte: start, $lte: end } } },
+        { $unwind: "$items" },
+        {
+            $group: {
+                _id: {
+                    bucket:
+                        groupBy === "hour"
+                            ? {
+                                hour: {
+                                    $hour: { date: "$timestamp", timezone: "Asia/Bangkok" },
+                                },
+                            }
+                            : {
+                                year: {
+                                    $year: { date: "$timestamp", timezone: "Asia/Bangkok" },
+                                },
+                                month: {
+                                    $month: { date: "$timestamp", timezone: "Asia/Bangkok" },
+                                },
+                                day: {
+                                    $dayOfMonth: {
+                                        date: "$timestamp",
+                                        timezone: "Asia/Bangkok",
+                                    },
+                                },
+                            },
+                    product: "$items.name",
+                    barcode: "$items.barcode",
+                },
+                totalSales: { $sum: "$items.subtotal" },
+                totalQuantity: { $sum: "$items.quantity" },
+            },
+        },
+        {
+            $group: {
+                _id: "$_id.bucket",
+                totalSales: { $sum: "$totalSales" },
+                totalQuantity: { $sum: "$totalQuantity" },
+                products: {
+                    $push: {
+                        name: "$_id.product",
+                        barcode: "$_id.barcode",
+                        quantity: "$totalQuantity",
+                        revenue: "$totalSales",
+                    },
+                },
+            },
+        },
+        { $sort: { _id: 1 } },
+    ]);
 
-  type BucketKey =
-    | { hour: number }
-    | { year: number; month: number; day: number }
-    | { year: number; month: number };
+    return receipts.map((r) => {
+        let date: Date;
 
-  // เก็บรวมเป็น bucket ตามชั่วโมง/รายวัน
-  const buckets = new Map<
-    string,
-    {
-      key: BucketKey;
-      totalSales: number;     // ผลรวม subtotal ของรายการ (หลังส่วนลดรายรายการ)
-      netSales: number;       // ยอดสุทธิ totalPrice ของบิล
-      totalQuantity: number;  // จำนวนชิ้นรวม
-      totalProfit: number;    // (totalPrice - ต้นทุนรวม) (คูณ -1 ถ้าเป็นใบคืน)
-      products: Map<string, { name: string; barcode: string; quantity: number; revenue: number }>;
-    }
-  >();
+        if (groupBy === "hour" && (r._id as any)?.hour !== undefined) {
+            date = new Date(start);
+            date.setHours((r._id as any).hour, 0, 0, 0);
+        } else if (groupBy === "day" && (r._id as any)?.year) {
+            const { year, month, day } = r._id as any;
+            date = new Date(year, month - 1, day);
+        } else {
+            date = new Date();
+        }
 
-  const makeKey = (d: Date): { key: BucketKey; str: string } => {
-    const loc = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-    if (groupBy === "hour") {
-      const hour = loc.getHours();
-      return { key: { hour }, str: `h:${hour}` };
-    }
-    if (groupBy === "month") {
-      const year = loc.getFullYear();
-      const month = loc.getMonth() + 1;
-      return { key: { year, month }, str: `m:${year}-${month}` };
-    }
-    return {
-      key: { year: loc.getFullYear(), month: loc.getMonth() + 1, day: loc.getDate() },
-      str: `d:${loc.getFullYear()}-${loc.getMonth() + 1}-${loc.getDate()}`,
-    };
-  };
+        // ✅ คำนวณกำไร
+        let totalProfit = 0;
+        if (Array.isArray(r.products)) {
+            r.products.forEach((p: any) => {
+                const stock = stockMap.get(p.barcode);
+                if (stock) {
+                    const profit = (stock.salePrice - stock.costPrice) * p.quantity;
+                    totalProfit += profit;
+                }
+            });
+        }
 
-  for (const r of receipts) {
-    if (r.isReturn) {
-      continue;
-    }
-    const { key, str } = makeKey(r.timestamp as Date);
-    if (!buckets.has(str)) {
-      buckets.set(str, {
-        key,
-        totalSales: 0,
-        netSales: 0,
-        totalQuantity: 0,
-        totalProfit: 0,
-        products: new Map(),
-      });
-    }
-    const b = buckets.get(str)!;
+        // ✅ หาสินค้าขายดีที่สุดในแต่ละ bucket
+        let bestSeller = { name: "-", quantity: 0, revenue: 0, barcode: "" };
+        if (Array.isArray(r.products) && r.products.length > 0) {
+            bestSeller = r.products.reduce(
+                (best: any, p: any) => (p.quantity > best.quantity ? p : best),
+                bestSeller
+            );
+        }
 
-    const sign = r.isReturn ? -1 : 1;
-
-    // รวม subtotal/qty ต่อบิล และคำนวณต้นทุนรวม
-    let billSubtotal = 0;
-    let billQty = 0;
-    let billCost = 0;
-
-    for (const it of r.items || []) {
-      const qty = Number(it.quantity || 0);
-      const subtotal = Number(it.subtotal || 0); // มักเป็นราคา net หลังส่วนลดรายรายการ
-      billSubtotal += subtotal;
-      billQty += qty;
-
-      const itemCost =
-        it.costPrice != null
-          ? Number(it.costPrice)
-          : Number(stockMap.get(it.barcode)?.costPrice || 0);
-      billCost += itemCost * qty;
-
-      // สะสมสินค้าเพื่อ top products ของ bucket
-      const pKey = it.barcode || it.name;
-      if (!b.products.has(pKey)) {
-        b.products.set(pKey, {
-          name: it.name,
-          barcode: it.barcode || "-",
-          quantity: 0,
-          revenue: 0,
-        });
-      }
-      const p = b.products.get(pKey)!;
-      p.quantity += qty * sign;
-      p.revenue += subtotal * sign;
-    }
-
-    const billNet = Number(r.totalPrice || 0); // ✅ ยอดสุทธิของใบเสร็จ
-    const billProfit = (billNet - billCost) * sign;
-
-    b.totalSales += billSubtotal * sign;
-    b.netSales += billNet * sign;
-    b.totalQuantity += billQty * sign;
-    b.totalProfit += billProfit;
-  }
-
-  // เรียงตามคีย์และคืนรูปแบบเดิม + ข้อมูลวันที่
-  const output = Array.from(buckets.values())
-    .sort((a, b) => (JSON.stringify(a.key) < JSON.stringify(b.key) ? -1 : 1))
-    .map((b) => {
-      let date: Date;
-      if ("hour" in b.key) {
-        date = new Date(start);
-        date.setHours(b.key.hour, 0, 0, 0);
-      } else if ("day" in b.key) {
-        const { year, month, day } = b.key;
-        date = new Date(year, month - 1, day);
-      } else {
-        const { year, month } = b.key;
-        date = new Date(year, month - 1, 1);
-      }
-
-      // best seller ใน bucket
-      const prodArr = Array.from(b.products.values());
-      const bestSeller =
-        prodArr.length > 0
-          ? prodArr.reduce((best, p) => (p.quantity > best.quantity ? p : best), prodArr[0])
-          : { name: "-", quantity: 0, revenue: 0, barcode: "" };
-
-      return {
-        totalSales: b.totalSales,
-        totalQuantity: b.totalQuantity,
-        netSales: b.netSales,        // ✅ ยอดสุทธิรวม
-        totalProfit: b.totalProfit,  // ✅ กำไรรวม (ตามนิยามใหม่)
-        bestSeller,
-        products: prodArr,
-        formattedDate: formatThaiDate(date),
-        hour: "hour" in b.key ? b.key.hour : null,
-      };
+        return {
+            totalSales: r.totalSales,
+            totalQuantity: r.totalQuantity,
+            netSales: r.totalSales,
+            totalProfit,
+            bestSeller,
+            products: r.products || [],
+            formattedDate: formatThaiDate(date),
+            hour: (r._id as any).hour ?? null,
+        };
     });
-
-  return output;
 }
 
 // ======================= Summary รวม =======================
 function makeSummary(data: any[]) {
-  const totalSales = data.reduce((s, d) => s + Number(d.totalSales || 0), 0);
-  const netSales = data.reduce((s, d) => s + Number(d.netSales || 0), 0);
-  const totalQuantity = data.reduce((s, d) => s + Number(d.totalQuantity || 0), 0);
-  const totalProfit = data.reduce((s, d) => s + Number(d.totalProfit || 0), 0);
-  return { totalSales, netSales, totalQuantity, totalProfit };
+    const totalSales = data.reduce((s, d) => s + d.totalSales, 0);
+    const totalQuantity = data.reduce((s, d) => s + d.totalQuantity, 0);
+    const totalProfit = data.reduce((s, d) => s + d.totalProfit, 0);
+    const netSales = data.reduce((s, d) => s + d.netSales, 0);
+    return { totalSales, totalQuantity, totalProfit, netSales };
 }
-
 
 // ===== คำนวณการเปลี่ยนแปลงจากช่วงก่อนหน้า =====
 function calcChange(current: any, previous: any) {

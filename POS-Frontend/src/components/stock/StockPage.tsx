@@ -16,7 +16,7 @@ import StockDetailModal from "./component/StockDetailModal";
 import GlobalPopup from "../layout/GlobalPopup";
 import AddProductModal from "../product/AddProduct/AddProductModal"
 import StockTable from "./component/StockTable";
-import LowStockList from "./component/LowStockList";
+
 import Pagination from "./component/Pagination";
 import FilterControl from "./component/FilterControl";
 
@@ -313,7 +313,7 @@ const StockPage: React.FC = () => {
             </div>
 
             <div className="summary-item low">
-              <label>⚠️ เหลือน้อย</label>
+              <label>⚠️ สินค้าเหลือน้อย</label>
               <span>{summary.lowStock}</span>
             </div>
 

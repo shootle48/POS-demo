@@ -5,25 +5,34 @@ export interface Category {
 
 export interface Product {
     _id: string;
+    stockId:string;
     isActive:boolean;
     barcode: string;
     name: string;
     price: number;
     totalQuantity: number;
+    costPrice: number;
     category: Category;
     imageUrl: string;
 }
 
 export interface StockItem {
+    _id: string;
     barcode: string;
     totalQuantity:number;
- 
     salePrice:number;
     costPrice:number;
     status: string;
     supplier: string;
     productId: Product;
     isActive:string;
+    threshold?: number;
+    name: string;
+    imageUrl: string;
+    updatedAt: string;
+    location: string;
+    category: string;
+   
 }
 
 export interface PaymentItem {
