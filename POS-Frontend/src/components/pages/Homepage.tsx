@@ -14,6 +14,7 @@ import {
   Legend,
   Area,
   Label,
+  PieLabelRenderProps,
 } from "recharts";
 
 import "../../styles/page/HomePage.css";
@@ -188,6 +189,37 @@ const describePaymentType = (type: string, amount: number) => {
     return "🟢 ขาย";
   }
   return `⚪ ${type}`;
+};
+
+const RADIAN = Math.PI / 180;
+const renderPiePercentageLabel = ({
+  cx = 0,
+  cy = 0,
+  midAngle = 0,
+  innerRadius = 0,
+  outerRadius = 0,
+  percent = 0,
+}: PieLabelRenderProps) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const angle = -midAngle * RADIAN;
+  const x = cx + radius * Math.cos(angle);
+  const y = cy + radius * Math.sin(angle);
+  const anchor = x > cx ? "start" : "end";
+  const safePercent = Number.isFinite(percent) ? percent : 0;
+  const percentageLabel = `${Math.max(0, Math.round((safePercent || 0) * 100))}%`;
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#ffffff"
+      fontSize={12}
+      fontWeight={600}
+      textAnchor={anchor}
+      dominantBaseline="central"
+    >
+      {percentageLabel}
+    </text>
+  );
 };
 
 const STOCK_TYPE_META: Record<
@@ -822,87 +854,27 @@ export default function HomePage() {
   return (
     <div className="display">
       <div className="home-gradient">
-        <div className="dashboard-overview">
-          <div className="dash-grid">
-            {/* Top 5 */}
-            <section className="panel card-like area-top5">
-              <h2 className="section-title">สินค้าขายดี (Top 5)</h2>
-              <TopProductsSlider items={topProductsFromApi.slice(0, 5)} />
-            </section>
+      <div className="dashboard-overview">
+        <div className="dash-grid">
+          {/* Top 5 */}
 
-            {/* เส้นรายชั่วโมง */}
-            <section className="panel card-like area-receipt">
-              <h2 className="section-title">{lineTitle}</h2>
-              <div className="chart-rect">
-                <ResponsiveContainer width="100%" height={LINE_CHART_HEIGHT}>
-                  <LineChart
-                    data={lineChartData}
-                    margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id={GRADIENTS.purple.id}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor={GRADIENTS.purple.from}
-                          stopOpacity={0.9}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor={GRADIENTS.purple.to}
-                          stopOpacity={0.4}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip
-                      formatter={(v: number) => formatCurrency(Number(v))}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#6C5CE7"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="none"
-                      fill="url(#gPurple)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
 
-            {/* พาย 1: Payments */}
-            <section className="panel card-like area-pie1">
-              <h2 className="section-title">รายได้ & กำไรรวม ({rangeLabel})</h2>
-              <div className="pie-rect">
-                <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
-                  <PieChart
-                    margin={{ top: 10, right: 20, left: 20, bottom: 32 }}
-                  >
-                    <Tooltip
-                      formatter={(v: number) => formatCurrency(Number(v))}
-                    />
-                    <Legend verticalAlign="bottom" height={48} />
-                    <Pie
-                      data={paymentPie}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      labelLine={false}
+          {/* เส้นรายชั่วโมง */}
+          <section className="panel card-like area-receipt">
+            <h2 className="section-title">{lineTitle}</h2>
+            <div className="chart-rect">
+              <ResponsiveContainer width="100%" height={LINE_CHART_HEIGHT}>
+                <LineChart
+                  data={lineChartData}
+                  margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id={GRADIENTS.purple.id}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
                     >
                       {paymentPie.map((_, idx) => (
                         <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -912,19 +884,41 @@ export default function HomePage() {
                         position="center"
                         style={{ fontWeight: 700, fontSize: 15 }}
                       />
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
+                      <stop
+                        offset="100%"
+                        stopColor={GRADIENTS.purple.to}
+                        stopOpacity={0.4}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
+                  <Line type="monotone" dataKey="value" stroke="#6C5CE7" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="value" stroke="none" fill="url(#gPurple)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
 
-            {/* พาย 2: PO (QC ผ่าน) */}
-            <section className="panel card-like area-pie2">
-              <h2 className="section-title">QC ผ่าน {rangeLabel}</h2>
-              <div className="pie-rect">
-                <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
-                  <PieChart
-                    margin={{ top: 10, right: 20, left: 20, bottom: 24 }}
+          {/* พาย 1: Payments */}
+          <section className="panel card-like area-pie1">
+            <h2 className="section-title">รายได้ & กำไรรวม ({rangeLabel})</h2>
+            <div className="pie-rect">
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 32 }}>
+                  <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
+                  <Legend verticalAlign="bottom" height={48} />
+                  <Pie
+                    data={paymentPie}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    labelLine={false}
+                    label={renderPiePercentageLabel}
                   >
                     <Tooltip
                       formatter={(v: number) => formatCurrency(Number(v))}
@@ -953,11 +947,32 @@ export default function HomePage() {
               <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
               <div className="kpi-val">{formatCurrency(netSalesTotal)}</div>
             </div>
-            <div className="kpi card-like area-kpi2">
-              <div className="kpi-head">จำนวนที่ขาย ({rangeLabel})</div>
-              <div className="kpi-val">
-                {Number(quantityTotal).toLocaleString()} ชิ้น
-              </div>
+          </section>
+
+          {/* พาย 2: PO (QC ผ่าน) */}
+          <section className="panel card-like area-pie2">
+            <h2 className="section-title">QC ผ่าน {rangeLabel}</h2>
+            <div className="pie-rect">
+              <ResponsiveContainer width="100%" height={PIE_CHART_HEIGHT}>
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 24 }}>
+                  <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
+                  <Legend verticalAlign="bottom" height={44} />
+                  <Pie
+                    data={poPie}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={45}
+                    outerRadius={85}
+                    labelLine={false}
+                    label={renderPiePercentageLabel}
+                    paddingAngle={3}
+                  >
+                    {poPie.map((_, idx) => (
+                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
             <div className="kpi card-like area-kpi3">
               <div className="kpi-head">กำไรรวม ({rangeLabel})</div>
@@ -969,6 +984,19 @@ export default function HomePage() {
               </div>
               <div className="kpi-val">{formatCurrency(poExpenseInRange)}</div>
             </div>
+          </div>
+          <div className="kpi card-like area-kpi2">
+            <div className="kpi-head">จำนวนที่ขาย ({rangeLabel})</div>
+            <div className="kpi-val">{Number(quantityTotal).toLocaleString()} ชิ้น</div>
+          </div>
+          <div className="kpi card-like area-kpi3">
+            <div className="kpi-head">กำไรรวม ({rangeLabel})</div>
+            <div className="kpi-val">{formatCurrency(profitTotal)}</div>
+          </div>
+          <div className="kpi card-like area-kpi4">
+            <div className="kpi-head">ค่าใช้จ่ายใบสั่งซื้อ ({rangeLabel})</div>
+            <div className="kpi-val">{formatCurrency(poExpenseInRange)}</div>
+          </div>
 
             {/* Stock transactions */}
             <section className="panel card-like area-timeline">

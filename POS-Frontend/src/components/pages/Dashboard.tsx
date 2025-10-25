@@ -105,6 +105,31 @@ const sanitizeNumber = (value: any) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
+const resolveApprovedPurchaseTotal = (po: PurchaseOrderEntry) => {
+  const approvedBatches = new Set(
+    (po.stockLots || [])
+      .filter((lot: any) => (lot?.qcStatus || "").trim() === "ผ่าน")
+      .map((lot: any) => lot?.batchNumber)
+      .filter(Boolean)
+  );
+
+  if (approvedBatches.size === 0) {
+    return 0;
+  }
+
+  return (po.items || []).reduce((sum: number, item: any) => {
+    const batch = item?.batchNumber || "";
+    if (!approvedBatches.has(batch)) return sum;
+
+    const value =
+      typeof item?.total === "number"
+        ? item.total
+        : sanitizeNumber(item?.costPrice) * sanitizeNumber(item?.quantity);
+
+    return sum + sanitizeNumber(value);
+  }, 0);
+};
+
 const SALES_EMPTY_STATE = "ไม่พบข้อมูลยอดขายในช่วงที่เลือก";
 
 export default function Dashboard() {
@@ -414,24 +439,13 @@ export default function Dashboard() {
     });
   }, [purchaseOrders, previousRangeKey]);
 
-  const poPieEntries = useMemo(() => {
-    const supplierMap = new Map<string, number>();
-    filteredPurchaseOrders.forEach((po) => {
-      const value = resolveApprovedPurchaseTotal(po);
-      if (value <= 0) return;
-      const supplier = po.supplierName || "ไม่ระบุ";
-      supplierMap.set(supplier, (supplierMap.get(supplier) || 0) + value);
-    });
-    return Array.from(supplierMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredPurchaseOrders]);
-
-  const poPie = useMemo(() => poPieEntries.slice(0, 8), [poPieEntries]);
-
-  const poExpenseInRange = useMemo(
-    () => poPieEntries.reduce((sum, entry) => sum + entry.value, 0),
-    [poPieEntries]
+  const purchaseExpense = useMemo(
+    () =>
+      filteredPurchaseOrders.reduce(
+        (sum, po) => sum + resolveApprovedPurchaseTotal(po),
+        0
+      ),
+    [filteredPurchaseOrders]
   );
 
   const previousPoExpenseInRange = useMemo(
@@ -448,7 +462,20 @@ export default function Dashboard() {
     return (
       ((poExpenseInRange - previousPoExpenseInRange) / previousPoExpenseInRange) * 100
     );
-  }, [poExpenseInRange, previousPoExpenseInRange]);
+  }, [purchaseExpense, previousPurchaseExpense]);
+
+  const purchasePieData = useMemo(() => {
+    const supplierMap = new Map<string, number>();
+    filteredPurchaseOrders.forEach((po) => {
+      const value = resolveApprovedPurchaseTotal(po);
+      if (value <= 0) return;
+      supplierMap.set(po.supplierName, (supplierMap.get(po.supplierName) || 0) + value);
+    });
+    return Array.from(supplierMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [filteredPurchaseOrders]);
 
   const timelineItems = useMemo(() => {
     return [...stockTransactions]
@@ -564,43 +591,42 @@ export default function Dashboard() {
   return (
     <div className="display">
       <div className="dashboard-page">
-        <div className="dashboard-heading">
-          <h1>📊 ภาพรวมธุรกิจ</h1>
-          <div className="dashboard-controls">
-            <div className="filters">
-              {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  className={filter === type ? "active" : ""}
-                  onClick={() => setFilter(type)}
-                >
-                  {type === "daily"
-                    ? "รายวัน"
-                    : type === "weekly"
-                    ? "รายสัปดาห์"
-                    : type === "monthly"
-                    ? "รายเดือน"
-                    : "รายปี"}
-                </button>
-              ))}
-            </div>
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date) => date && setSelectedDate(date)}
-              locale={th}
-              dateFormat={
-                filter === "monthly"
-                  ? "MMMM yyyy"
-                  : filter === "yearly"
-                  ? "yyyy"
-                  : "dd MMMM yyyy"
-              }
-              showMonthYearPicker={filter === "monthly"}
-              showYearPicker={filter === "yearly"}
-              className="date-picker"
-            />
+      <div className="dashboard-heading">
+        <h1>📊 ภาพรวมธุรกิจ</h1>
+        <div className="dashboard-controls">
+          <div className="filters">
+            {(["daily", "weekly", "monthly", "yearly"] as RangeKey[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={filter === type ? "active" : ""}
+                onClick={() => setFilter(type)}
+              >
+                {type === "daily"
+                  ? "รายวัน"
+                  : type === "weekly"
+                  ? "รายสัปดาห์"
+                  : type === "monthly"
+                  ? "รายเดือน"
+                  : "รายปี"}
+              </button>
+            ))}
           </div>
+          <DatePicker
+            selected={selectedDate}
+            onChange={(date) => date && setSelectedDate(date)}
+            locale={th}
+            dateFormat={
+              filter === "monthly"
+                ? "MMMM yyyy"
+                : filter === "yearly"
+                ? "yyyy"
+                : "dd MMMM yyyy"
+            }
+            showMonthYearPicker={filter === "monthly"}
+            showYearPicker={filter === "yearly"}
+            className="date-picker"
+          />
         </div>
 
       {error && <div className="dashboard-error">{error}</div>}
