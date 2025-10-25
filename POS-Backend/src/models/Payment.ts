@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPayment extends Document {
-    userId: mongoose.Types.ObjectId;
     saleId: string; // รหัสคำสั่งซื้อ / POS session
     receiptId?: mongoose.Types.ObjectId | null | any;
     employeeName: string; // พนักงานที่รับเงิน/คืนเงิน
@@ -18,7 +17,6 @@ export interface IPayment extends Document {
 
 const PaymentSchema = new Schema<IPayment>(
     {
-        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
         saleId: { type: String, required: true },
         receiptId: { type: Schema.Types.ObjectId, ref: "Receipt" },
         employeeName: { type: String, required: true },

@@ -98,7 +98,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         message: user.role === 'admin' ? 'Login successful as admin' : 'Login successful',
         token,
         role: user.role,
-        nameStore: user.nameStore,
       });
       return;
     }
@@ -110,11 +109,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         res.status(400).json({ message: 'รหัสผ่านไม่ถูกต้อง' });
         return;
       }
-      
-      const owner = employee.adminId
-        ? await User.findById(employee.adminId).select('nameStore')
-        : null;
-      const nameStore = owner?.nameStore || 'EAZYPOS';
 
       // 💡 ต้องแนบ adminId เข้าไปใน token ด้วย
       const token = jwt.sign(
@@ -127,18 +121,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           profile_img: employee.profile_img,
           role: employee.role,
           adminId: employee.adminId, // สำคัญ! เพื่อให้ใช้ใน getProducts ได้
-          nameStore,
         },
         process.env.JWT_SECRET as string,
         { expiresIn: '3h' }
       );
 
-      res.status(200).json({ 
-        message: 'เข้าสู่ระบบสำเร็จ', 
-        token, 
-        role: employee.role,
-        nameStore,
-      });
+      res.status(200).json({ message: 'เข้าสู่ระบบสำเร็จ', token, role: employee.role });
       return;
     }
   } catch (error) {
@@ -160,18 +148,6 @@ export const renewToken = async (req: Request, res: Response): Promise<void> => 
 
     // ตรวจสอบและถอดรหัส token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
-    
-    let nameStore = decoded.nameStore as string | undefined;
-
-    // ✅ ถ้าเป็น employee แต่ token เดิมยังไม่มี nameStore ให้ไปโหลดจาก admin
-    if (decoded.role === 'employee' && (!nameStore || nameStore === '')) {
-      if (decoded.adminId) {
-        const owner = await User.findById(decoded.adminId).select('nameStore');
-        nameStore = owner?.nameStore || 'EAZYPOS';
-      } else {
-        nameStore = 'EAZYPOS';
-      }
-    }
 
     // สร้าง token ใหม่จากข้อมูลเดิม
     const newToken = jwt.sign(
@@ -182,7 +158,7 @@ export const renewToken = async (req: Request, res: Response): Promise<void> => 
         lastname: decoded.lastname,
         username: decoded.username,
         role: decoded.role,
-        nameStore,
+        nameStore: decoded.nameStore,
         profile_img: decoded.profile_img,
         adminId: decoded.adminId,
         position: decoded.position,
