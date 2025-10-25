@@ -1,36 +1,32 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import StockTransaction from "../models/StockTransaction";
 import Stock from "../models/Stock";
 import Product from "../models/Product";
-import { verifyToken } from "../utils/auth";
+import { AuthRequest } from "../middlewares/authMiddleware";
+import { resolveOwnerContext } from "../utils/tenant";
 
 // 🧩 สร้าง Transaction ใหม่ (ขาย / รับเข้า / คืน / ปรับยอด)
-export const createTransaction = async (req: Request, res: Response): Promise<void> => {
+export const createTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const token = req.headers["authorization"]?.split(" ")[1];
-        if (!token) {
-            res.status(401).json({ success: false, message: "No token provided" });
+        if (!req.userId) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
             return;
         }
 
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" });
-            return;
-        }
+        const { ownerObjectId } = await resolveOwnerContext(req);
 
         const { stockId, stockLotId, productId, qcReference, source, type, quantity, referenceId, costPrice, salePrice, notes } =
             req.body;
 
         // ✅ ตรวจสอบ stock
-        const stock = await Stock.findById(stockId);
+        const stock = await Stock.findOne({ _id: stockId, userId: ownerObjectId });
         if (!stock) {
             res.status(404).json({ success: false, message: "Stock not found" });
             return;
         }
 
         // ✅ ตรวจสอบ product
-        const product = await Product.findById(productId);
+        const product = await Product.findOne({ _id: productId, userId: ownerObjectId });
         if (!product) {
             res.status(404).json({ success: false, message: "Product not found" });
             return;
@@ -71,7 +67,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
             quantity,
             referenceId,
             qcReference,
-            userId: decoded.userId,
+            userId: req.userId,
             costPrice: costPrice ?? stock.costPrice ?? product.price,
             salePrice: salePrice ?? stock.salePrice ?? product.price,
             source: source || "SELF",
@@ -99,12 +95,21 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 };
 
 //  ดึงประวัติ Transaction ทั้งหมด
-export const getAllTransactions = async (_: Request, res: Response): Promise<void> => {
+export const getAllTransactions = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const transactions = await StockTransaction.find()
+        const { ownerObjectId } = await resolveOwnerContext(req);
+
+        const stockIds = await Stock.find({ userId: ownerObjectId }).distinct("_id");
+
+        if (!stockIds.length) {
+            res.status(200).json({ success: true, data: [] });
+            return;
+        }
+
+        const transactions = await StockTransaction.find({ stockId: { $in: stockIds } })
             .populate({
                 path: "stockId",
-                populate: { path: "location", model: "Warehouse" }, 
+                populate: { path: "location", model: "Warehouse" },
             })
             .populate("productId")
             .populate("userId")
@@ -121,9 +126,22 @@ export const getAllTransactions = async (_: Request, res: Response): Promise<voi
 
 
 //  ดึง Transaction ตามสินค้า
-export const getTransactionsByProduct = async (req: Request, res: Response): Promise<void> => {
+export const getTransactionsByProduct = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const transactions = await StockTransaction.find({ productId: req.params.productId })
+        const { ownerObjectId } = await resolveOwnerContext(req);
+
+        const product = await Product.findOne({ _id: req.params.productId, userId: ownerObjectId });
+        if (!product) {
+            res.status(404).json({ success: false, message: "Product not found" });
+            return;
+        }
+
+        const stockIds = await Stock.find({ userId: ownerObjectId }).distinct("_id");
+
+        const transactions = await StockTransaction.find({
+            productId: product._id,
+            stockId: { $in: stockIds },
+        })
             .populate("stockId")
             .populate("userId")
             .sort({ createdAt: -1 });
@@ -135,9 +153,17 @@ export const getTransactionsByProduct = async (req: Request, res: Response): Pro
 };
 
 //  ดึง Transaction ตาม Stock
-export const getTransactionsByStock = async (req: Request, res: Response): Promise<void> => {
+export const getTransactionsByStock = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const transactions = await StockTransaction.find({ stockId: req.params.stockId })
+        const { ownerObjectId } = await resolveOwnerContext(req);
+
+        const stock = await Stock.findOne({ _id: req.params.stockId, userId: ownerObjectId });
+        if (!stock) {
+            res.status(404).json({ success: false, message: "Stock not found" });
+            return;
+        }
+
+        const transactions = await StockTransaction.find({ stockId: stock._id })
             .populate("productId")
             .populate("userId")
             .sort({ createdAt: -1 });

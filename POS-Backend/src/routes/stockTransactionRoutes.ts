@@ -5,11 +5,12 @@ import {
     getTransactionsByProduct,
     getTransactionsByStock,
 } from "../controllers/stockTransactionController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = express.Router();
-router.post("/create", createTransaction);
-router.get("/transactions", getAllTransactions);
-router.get("/product/:productId", getTransactionsByProduct);
-router.get("/stock/:stockId", getTransactionsByStock);
+router.post("/create", authMiddleware, createTransaction);
+router.get("/transactions", authMiddleware, getAllTransactions);
+router.get("/product/:productId", authMiddleware, getTransactionsByProduct);
+router.get("/stock/:stockId", authMiddleware, getTransactionsByStock);
 
 export default router;
