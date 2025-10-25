@@ -602,12 +602,11 @@ export default function EmployeeDashboard() {
             <section className="card-like employee-area-payment">
               <h2 className="section-title">ประวัติการขาย {rangeLabel}</h2>
               <div className="table-scroll tall">
-                <table className="nice-table payment-table employee-payment-table">
+                <table className="employee-stock-table employee-payment-table">
                   <thead>
                     <tr>
                       <th style={{ width: 60 }}>ลำดับ</th>
                       <th>รหัสขาย</th>
-                      <th>พนักงาน</th>
                       <th>ประเภท</th>
                       <th>วิธีชำระ</th>
                       <th style={{ textAlign: "right" }}>ยอดชำระ</th>
@@ -621,30 +620,60 @@ export default function EmployeeDashboard() {
                       const amountValue = Number(p.amount ?? 0);
                       const amountColor =
                         amountValue < 0 ? "#dc2626" : amountValue === 0 ? "#1f2937" : "#047857";
+                      const typeLabel = describePaymentType(p.type, amountValue);
+                      const methodLabel = describePaymentMethod(p.paymentMethod);
+                      const statusLabel = describePaymentStatus(p.status);
+                      const statusTone = statusLabel.includes("✅")
+                        ? "success"
+                        : statusLabel.includes("❌")
+                        ? "danger"
+                        : statusLabel.includes("⏳")
+                        ? "pending"
+                        : "neutral";
+                      const typeTone = typeLabel.includes("🔴")
+                        ? "refund"
+                        : typeLabel.includes("⏸")
+                        ? "hold"
+                        : "sale";
+                      const typeIcon =
+                        typeTone === "refund" ? "↩️" : typeTone === "hold" ? "⏸️" : "🧾";
                       return (
                         <tr key={`${p.id}-${idx}`}>
                           <td>{idx + 1}</td>
-                          <td>{p.saleId}</td>
-                          <td>{p.employeeName}</td>
-                          <td className="type-cell">{describePaymentType(p.type, amountValue)}</td>
-                          <td>{describePaymentMethod(p.paymentMethod)}</td>
-                          <td
-                            style={{
-                              textAlign: "right",
-                              fontWeight: 600,
-                              color: amountColor,
-                            }}
-                          >
+                          <td>
+                            <div className="employee-payment-sale">
+                              <div className="employee-payment-pill">{typeIcon}</div>
+                              <div className="employee-payment-meta">
+                                <span className="employee-payment-id">{p.saleId}</span>
+                                <span className="employee-payment-staff">พนักงาน: {p.employeeName}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="type-cell">
+                            <span className={`employee-payment-chip type ${typeTone}`}>
+                              {typeLabel}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="employee-payment-chip method">{methodLabel}</span>
+                          </td>
+                          <td className="employee-payment-amount" style={{ color: amountColor }}>
                             {formatCurrency(amountValue)}
                           </td>
-                          <td className="status-cell">{describePaymentStatus(p.status)}</td>
-                          <td>{formatPaymentDateTime(stamp)}</td>
+                          <td className="status-cell">
+                            <span className={`employee-payment-chip status ${statusTone}`}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="employee-payment-date">{formatPaymentDateTime(stamp)}</div>
+                          </td>
                         </tr>
                       );
                     })}
                     {paymentsInRange.length === 0 && (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: "center", color: "#6b7280" }}>
+                        <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
                           ยังไม่มีการขายสินค้าในช่วงนี้
                         </td>
                       </tr>

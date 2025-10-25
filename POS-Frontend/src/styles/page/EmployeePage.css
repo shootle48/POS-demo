@@ -51,10 +51,13 @@
 }
 
 .employee-area-top5,
-.employee-area-receipt,
+.employee-area-receipt {
+  grid-column: 1 / -1;
+}
+
 .employee-area-payment,
 .employee-area-stock {
-  grid-column: 1 / -1;
+  grid-column: span 6;
 }
 
 .employee-area-kpi1,
@@ -92,6 +95,7 @@
   white-space: nowrap;
 }
 
+.employee-area-payment,
 .employee-area-stock {
   background: linear-gradient(160deg, rgba(244, 114, 182, 0.12), rgba(14, 165, 233, 0.08));
 }
@@ -102,6 +106,117 @@
   border-spacing: 0 12px;
   color: #0f172a;
   font-size: 0.9rem;
+}
+
+.employee-payment-table thead th {
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.18), rgba(45, 212, 191, 0.14));
+}
+
+.employee-payment-table tbody tr:hover {
+  box-shadow: 0 18px 36px rgba(59, 130, 246, 0.24);
+}
+
+.employee-payment-sale {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.employee-payment-pill {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(165, 180, 252, 0.32));
+  border: 1px solid rgba(59, 130, 246, 0.22);
+}
+
+.employee-payment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.employee-payment-id {
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.employee-payment-staff {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.employee-payment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+.employee-payment-chip.type {
+  background: rgba(16, 185, 129, 0.12);
+  color: #0f766e;
+}
+
+.employee-payment-chip.type.sale {
+  background: rgba(16, 185, 129, 0.12);
+  color: #0f766e;
+}
+
+.employee-payment-chip.type.refund {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.employee-payment-chip.type.hold {
+  background: rgba(234, 179, 8, 0.16);
+  color: #92400e;
+}
+
+.employee-payment-chip.status {
+  background: rgba(245, 158, 11, 0.12);
+  color: #c2410c;
+}
+
+.employee-payment-chip.status.success {
+  background: rgba(34, 197, 94, 0.16);
+  color: #15803d;
+}
+
+.employee-payment-chip.status.danger {
+  background: rgba(248, 113, 113, 0.16);
+  color: #b91c1c;
+}
+
+.employee-payment-chip.status.pending {
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+}
+
+.employee-payment-amount {
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.employee-payment-date {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.employee-payment-date::after {
+  content: "";
 }
 
 .employee-stock-table thead th {
@@ -239,6 +354,11 @@
   .employee-grid {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
+
+  .employee-area-payment,
+  .employee-area-stock {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 900px) {
@@ -247,7 +367,9 @@
   }
 
   .employee-area-kpi1,
-  .employee-area-kpi2 {
+  .employee-area-kpi2,
+  .employee-area-payment,
+  .employee-area-stock {
     grid-column: 1 / -1;
   }
 }
