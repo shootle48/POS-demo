@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { th } from "date-fns/locale";
+import { jwtDecode } from "jwt-decode";
 
 import "../../styles/page/DashboardPage.css";
 
@@ -16,6 +17,7 @@ import DashboardKpiRow, { KpiCardItem } from "./dashboard/DashboardKpiRow";
 import DashboardPieChartCard from "./dashboard/DashboardPieChartCard";
 import DashboardLineChartCard from "./dashboard/DashboardLineChartCard";
 import DashboardTimeline from "./dashboard/DashboardTimeline";
+import { resolveApprovedPurchaseTotal } from "../../utils/purchaseOrders";
 
 type RangeKey = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -142,8 +144,40 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        setUserRole(typeof decoded?.role === "string" ? decoded.role : null);
+      } catch (err) {
+        console.warn("ไม่สามารถถอดรหัสโทเคนได้", err);
+        setUserRole(null);
+      }
+    } else {
+      setUserRole(null);
+    }
+    setAuthChecked(true);
+  }, []);
+
+  const isAdmin = (userRole || "").toLowerCase() === "admin";
+
+  useEffect(() => {
+    if (!authChecked) {
+      return;
+    }
+    if (!isAdmin) {
+      setSummaryData(null);
+      setPayments([]);
+      setPurchaseOrders([]);
+      setStockTransactions([]);
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
     let ignore = false;
     const load = async () => {
       setLoading(true);
@@ -260,7 +294,7 @@ export default function Dashboard() {
     return () => {
       ignore = true;
     };
-  }, [filter, selectedDate]);
+  }, [filter, selectedDate, isAdmin, authChecked]);
 
   const currentRange = useMemo(() => getRangeBounds(filter, selectedDate), [filter, selectedDate]);
   const previousRange = useMemo(
@@ -286,7 +320,13 @@ export default function Dashboard() {
 
   const topProducts = useMemo(() => {
     const base = summaryData?.topProducts?.[filter] || [];
-    return base.slice(0, 5).map((item: any, idx: number) => ({
+    const filtered = base.filter((item: any) => {
+      const qty = sanitizeNumber(item?.quantity);
+      const revenue = sanitizeNumber(item?.netRevenue ?? item?.revenue);
+      return qty > 0 || revenue > 0;
+    });
+
+    return filtered.slice(0, 5).map((item: any, idx: number) => ({
       rank: idx + 1,
       name: item?.name || item?.productName || "-",
       quantity: sanitizeNumber(item?.quantity),
@@ -408,7 +448,7 @@ export default function Dashboard() {
     [filteredPurchaseOrders]
   );
 
-  const previousPurchaseExpense = useMemo(
+  const previousPoExpenseInRange = useMemo(
     () =>
       previousPurchaseOrders.reduce(
         (sum, po) => sum + resolveApprovedPurchaseTotal(po),
@@ -417,10 +457,10 @@ export default function Dashboard() {
     [previousPurchaseOrders]
   );
 
-  const purchaseExpenseChange = useMemo(() => {
-    if (previousPurchaseExpense === 0) return null;
+  const poExpenseChange = useMemo(() => {
+    if (previousPoExpenseInRange === 0) return null;
     return (
-      ((purchaseExpense - previousPurchaseExpense) / previousPurchaseExpense) * 100
+      ((poExpenseInRange - previousPoExpenseInRange) / previousPoExpenseInRange) * 100
     );
   }, [purchaseExpense, previousPurchaseExpense]);
 
@@ -506,8 +546,8 @@ export default function Dashboard() {
     {
       id: "po-expense",
       title: "ค่าใช้จ่ายใบสั่งซื้อ",
-      value: formatCurrency(purchaseExpense),
-      change: purchaseExpenseChange,
+      value: formatCurrency(poExpenseInRange),
+      change: poExpenseChange,
       changeText: "เทียบช่วงก่อนหน้า",
       footnote: "รวมใบสั่งซื้อในช่วงที่เลือก",
     },
@@ -525,6 +565,28 @@ export default function Dashboard() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })}`;
+
+  if (!authChecked) {
+    return (
+      <div className="display">
+        <div className="dashboard-page">
+          <div className="dashboard-loading">กำลังตรวจสอบสิทธิ์...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="display">
+        <div className="dashboard-page">
+          <div className="dashboard-guard-message">
+            หน้านี้สำหรับผู้ดูแลระบบเท่านั้น กรุณาติดต่อผู้ดูแลเพื่อขอสิทธิ์เข้าถึง
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="display">
@@ -566,7 +628,6 @@ export default function Dashboard() {
             className="date-picker"
           />
         </div>
-      </div>
 
       {error && <div className="dashboard-error">{error}</div>}
 
@@ -576,7 +637,7 @@ export default function Dashboard() {
           <DashboardTopList
             items={topProducts}
             loading={loading}
-            emptyMessage="ยังไม่มีข้อมูลสินค้าขายดีในช่วงนี้"
+            emptyMessage="ยังไม่มีการขายสินค้าในช่วงนี้"
           />
         </section>
 
@@ -607,7 +668,7 @@ export default function Dashboard() {
           <h2>สัดส่วนค่าใช้จ่ายใบสั่งซื้อ</h2>
           <span className="card-subtitle">แยกตามซัพพลายเออร์</span>
           <DashboardPieChartCard
-            data={purchasePieData}
+            data={poPie}
             loading={loading}
             emptyMessage="ยังไม่มีค่าใช้จ่ายใบสั่งซื้อในช่วงนี้"
             colors={COLORS}

@@ -153,10 +153,15 @@ const describePaymentMethod = (method: string) => {
   if (value.includes("card") || value.includes("บัตร")) return "💳 บัตรเครดิต";
   if (value.includes("qr")) return "📱 QR Code";
   if (value.includes("cash") || value.includes("เงินสด")) return "💵 เงินสด";
-  if (value.includes("bank") || value.includes("transfer") || value.includes("โอน")) {
+  if (
+    value.includes("bank") ||
+    value.includes("transfer") ||
+    value.includes("โอน")
+  ) {
     return "🏦 โอนธนาคาร";
   }
-  if (value.includes("prompt") || value.includes("พร้อมเพย์")) return "📲 พร้อมเพย์";
+  if (value.includes("prompt") || value.includes("พร้อมเพย์"))
+    return "📲 พร้อมเพย์";
   if (!value) return "💠 ไม่ระบุ";
   return `💠 ${method}`;
 };
@@ -165,7 +170,8 @@ const describePaymentStatus = (status: string) => {
   const value = (status || "").toString().toLowerCase();
   if (value.includes("สำเร็จ") || value.includes("success")) return "✅ สำเร็จ";
   if (value.includes("ล้มเหลว") || value.includes("fail")) return "❌ ล้มเหลว";
-  if (value.includes("รอดำเนินการ") || value.includes("pending")) return "⏳ รอดำเนินการ";
+  if (value.includes("รอดำเนินการ") || value.includes("pending"))
+    return "⏳ รอดำเนินการ";
   if (!value) return "⏳ รอดำเนินการ";
   return status;
 };
@@ -175,7 +181,8 @@ const describePaymentType = (type: string, amount: number) => {
   if (normalized.includes("REFUND")) return "🔴 คืนเงิน";
   if (normalized.includes("SALE")) return "🟢 ขาย";
   if (normalized.includes("CANCEL")) return "⚪ ยกเลิก";
-  if (normalized.includes("HOLD") || normalized.includes("PENDING")) return "⏸️ รอชำระ";
+  if (normalized.includes("HOLD") || normalized.includes("PENDING"))
+    return "⏸️ รอชำระ";
   if (!normalized) {
     if (Number(amount) < 0) return "🔴 คืนเงิน";
     if (Number(amount) === 0) return "⚪ อื่นๆ";
@@ -330,7 +337,10 @@ export default function HomePage() {
                 "ไม่ระบุ",
               amount,
               profit: sanitizeNumber(
-                item?.profit ?? item?.netProfit ?? item?.totalProfit ?? item?.margin
+                item?.profit ??
+                  item?.netProfit ??
+                  item?.totalProfit ??
+                  item?.margin
               ),
               employeeName:
                 item?.employeeName ||
@@ -339,7 +349,8 @@ export default function HomePage() {
                 item?.user?.name ||
                 item?.staffName ||
                 "-",
-              status: item?.status || item?.state || item?.paymentStatus || "ไม่ระบุ",
+              status:
+                item?.status || item?.state || item?.paymentStatus || "ไม่ระบุ",
               type: normalizedType,
               createdAt:
                 item?.createdAt ||
@@ -397,7 +408,12 @@ export default function HomePage() {
             const stock = tx?.stockId || {};
             const lot = tx?.stockLotId || {};
             const user = tx?.userId || tx?.user || {};
-            const typeRaw = (tx?.type || tx?.action || tx?.direction || "").toString();
+            const typeRaw = (
+              tx?.type ||
+              tx?.action ||
+              tx?.direction ||
+              ""
+            ).toString();
             const { label: typeLabel, tone } = resolveStockMeta(typeRaw);
             const baseQty = sanitizeNumber(
               tx?.quantity ?? tx?.qty ?? lot?.quantity ?? stock?.quantity
@@ -408,7 +424,9 @@ export default function HomePage() {
               tx?.locationName ||
               stock?.location?.name ||
               stock?.locationName ||
-              (typeof stock?.location === "string" ? stock.location : undefined) ||
+              (typeof stock?.location === "string"
+                ? stock.location
+                : undefined) ||
               lot?.location?.name ||
               lot?.locationName ||
               "";
@@ -493,17 +511,9 @@ export default function HomePage() {
               locationName: locationName || "-",
               supplierName: supplierName || "-",
               notes:
-                tx?.notes ||
-                tx?.remark ||
-                tx?.description ||
-                lot?.notes ||
-                "",
+                tx?.notes || tx?.remark || tx?.description || lot?.notes || "",
               userName:
-                userName ||
-                user?.name ||
-                user?.username ||
-                user?.email ||
-                "",
+                userName || user?.name || user?.username || user?.email || "",
               tone,
               typeLabel,
               poNumber: poNumber || "-",
@@ -571,7 +581,11 @@ export default function HomePage() {
 
   const summaryForRange = summaryData?.summary?.[filter] || {};
   const rangeLabel =
-    filter === "daily" ? "วันนี้" : filter === "weekly" ? "สัปดาห์นี้" : "เดือนนี้";
+    filter === "daily"
+      ? "วันนี้"
+      : filter === "weekly"
+      ? "สัปดาห์นี้"
+      : "เดือนนี้";
   const lineTitle =
     filter === "daily"
       ? "กราฟยอดขายวันนี้ (รายชั่วโมง)"
@@ -590,8 +604,12 @@ export default function HomePage() {
           entry,
           baseDate,
           index: idx,
-          sales: Number(entry?.netSales ?? entry?.totalSales ?? entry?.sales ?? 0),
-          profit: Number(entry?.totalProfit ?? entry?.profit ?? entry?.netProfit ?? 0),
+          sales: Number(
+            entry?.netSales ?? entry?.totalSales ?? entry?.sales ?? 0
+          ),
+          profit: Number(
+            entry?.totalProfit ?? entry?.profit ?? entry?.netProfit ?? 0
+          ),
           quantity: Number(
             entry?.totalQuantity ??
               entry?.quantity ??
@@ -602,7 +620,9 @@ export default function HomePage() {
         };
       })
       .filter(
-        (item): item is {
+        (
+          item
+        ): item is {
           entry: any;
           baseDate: Date;
           index: number;
@@ -657,7 +677,8 @@ export default function HomePage() {
               day: "2-digit",
               month: "short",
             });
-          sortValue = item.entry?.weekIndex ?? item.index ?? item.baseDate.getTime();
+          sortValue =
+            item.entry?.weekIndex ?? item.index ?? item.baseDate.getTime();
         }
         return { label, value: item.sales, sortValue };
       })
@@ -699,8 +720,11 @@ export default function HomePage() {
     [purchaseOrders, currentRangeKey]
   );
 
-  const poPie = useMemo(() => {
-    const approvedTotalsByProduct: Record<string, { name: string; value: number }> = {};
+  const poPieEntries = useMemo(() => {
+    const approvedTotalsByProduct: Record<
+      string,
+      { name: string; value: number }
+    > = {};
     purchaseInRange.forEach((po: any) => {
       const approvedBatches = new Set(
         (po.stockLots || [])
@@ -720,14 +744,16 @@ export default function HomePage() {
         };
       });
     });
-    return Object.values(approvedTotalsByProduct)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
+    return Object.values(approvedTotalsByProduct).sort(
+      (a, b) => b.value - a.value
+    );
   }, [purchaseInRange]);
 
+  const poPie = useMemo(() => poPieEntries.slice(0, 8), [poPieEntries]);
+
   const poExpenseInRange = useMemo(
-    () => poPie.reduce((sum, entry) => sum + entry.value, 0),
-    [poPie]
+    () => poPieEntries.reduce((sum, entry) => sum + entry.value, 0),
+    [poPieEntries]
   );
 
   const stockTimeline = useMemo(() => {
@@ -738,7 +764,9 @@ export default function HomePage() {
           new Date(a.createdAt || 0).getTime()
       )
       .map((row) => {
-        const stamp = row.createdAt ? toBangkokDate(new Date(row.createdAt)) : null;
+        const stamp = row.createdAt
+          ? toBangkokDate(new Date(row.createdAt))
+          : null;
         const when = stamp
           ? stamp.toLocaleString("th-TH", {
               day: "2-digit",
@@ -815,7 +843,11 @@ export default function HomePage() {
     );
   }
   if (!summaryData) {
-    return <div style={{ textAlign: "center", padding: 50 }}>⏳ กำลังโหลดข้อมูล...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: 50 }}>
+        ⏳ กำลังโหลดข้อมูล...
+      </div>
+    );
   }
 
   // ====== UI ======
@@ -844,10 +876,13 @@ export default function HomePage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop
-                        offset="0%"
-                        stopColor={GRADIENTS.purple.from}
-                        stopOpacity={0.9}
+                      {paymentPie.map((_, idx) => (
+                        <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                      ))}
+                      <Label
+                        value={formatCurrency(paymentPieRevenue)}
+                        position="center"
+                        style={{ fontWeight: 700, fontSize: 15 }}
                       />
                       <stop
                         offset="100%"
@@ -885,17 +920,32 @@ export default function HomePage() {
                     labelLine={false}
                     label={renderPiePercentageLabel}
                   >
-                    {paymentPie.map((_, idx) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                    <Label
-                      value={formatCurrency(paymentPieRevenue)}
-                      position="center"
-                      style={{ fontWeight: 700, fontSize: 15 }}
+                    <Tooltip
+                      formatter={(v: number) => formatCurrency(Number(v))}
                     />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+                    <Legend verticalAlign="bottom" height={44} />
+                    <Pie
+                      data={poPie}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={45}
+                      outerRadius={85}
+                      labelLine={false}
+                      paddingAngle={3}
+                    >
+                      {poPie.map((_, idx) => (
+                        <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+
+            {/* KPI */}
+            <div className="kpi card-like area-kpi1">
+              <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
+              <div className="kpi-val">{formatCurrency(netSalesTotal)}</div>
             </div>
           </section>
 
@@ -924,13 +974,15 @@ export default function HomePage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </section>
-
-          {/* KPI */}
-          <div className="kpi card-like area-kpi1">
-            <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
-            <div className="kpi-val">
-              {formatCurrency(netSalesTotal)}
+            <div className="kpi card-like area-kpi3">
+              <div className="kpi-head">กำไรรวม ({rangeLabel})</div>
+              <div className="kpi-val">{formatCurrency(profitTotal)}</div>
+            </div>
+            <div className="kpi card-like area-kpi4">
+              <div className="kpi-head">
+                ค่าใช้จ่ายใบสั่งซื้อ ({rangeLabel})
+              </div>
+              <div className="kpi-val">{formatCurrency(poExpenseInRange)}</div>
             </div>
           </div>
           <div className="kpi card-like area-kpi2">
@@ -946,95 +998,122 @@ export default function HomePage() {
             <div className="kpi-val">{formatCurrency(poExpenseInRange)}</div>
           </div>
 
-          {/* Stock transactions */}
-          <section className="panel card-like area-timeline">
-            <h2 className="section-title">ความเคลื่อนไหวสต็อกล่าสุด</h2>
-            <div className="timeline-scroll">
-              <div className="timeline">
-                {stockTimeline.map((item) => {
-                  const toneClass = item.tone === "out" ? "danger" : item.tone === "in" ? "success" : "info";
-                  return (
-                    <div key={item.id} className="timeline-item">
-                      <div className={`dot ${item.tone}`} />
-                      <div className="content">
-                        <div className="line1">
-                          <span className="when">{item.when}</span>
-                          <span className={`pill ${toneClass}`}>{item.typeLabel}</span>
-                        </div>
-                        <div className="line2">
-                          <span className="name">{item.name}</span>
-                          <span className="qty">× {Number(item.quantity).toLocaleString()}</span>
-                        </div>
-                        <div className="line3 muted">
-                          {item.barcode ? `บาร์โค้ด: ${item.barcode}` : ""}
-                        </div>
-                        {item.userName && (
-                          <div className="line4 muted">พนักงาน: {item.userName}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {stockTimeline.length === 0 && <div className="muted">— ไม่มีข้อมูล —</div>}
-              </div>
-            </div>
-          </section>
-
-          {/* Payment history */}
-          <section className="panel card-like area-payment">
-            <h2 className="section-title">ประวัติการขาย {rangeLabel}</h2>
-            <div className="table-scroll tall">
-              <table className="nice-table payment-table home-payment-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 60 }}>ลำดับ</th>
-                    <th>รหัสขาย</th>
-                    <th>พนักงาน</th>
-                    <th>ประเภท</th>
-                    <th>วิธีชำระ</th>
-                    <th style={{ textAlign: "right" }}>ยอดชำระ</th>
-                    <th>สถานะ</th>
-                    <th>วันที่</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentsInRange.map((p, idx) => {
-                    const stamp = p.createdAt || p.updatedAt;
-                    const amountValue = Number(p.amount ?? 0);
-                    const amountColor = amountValue < 0 ? "#dc2626" : amountValue === 0 ? "#1f2937" : "#047857";
+            {/* Stock transactions */}
+            <section className="panel card-like area-timeline">
+              <h2 className="section-title">ความเคลื่อนไหวสต็อกล่าสุด</h2>
+              <div className="timeline-scroll">
+                <div className="timeline">
+                  {stockTimeline.map((item) => {
+                    const toneClass =
+                      item.tone === "out"
+                        ? "danger"
+                        : item.tone === "in"
+                        ? "success"
+                        : "info";
                     return (
-                      <tr key={`${p.id}-${idx}`}>
-                        <td>{idx + 1}</td>
-                        <td>{p.saleId}</td>
-                        <td>{p.employeeName}</td>
-                        <td className="type-cell">{describePaymentType(p.type, amountValue)}</td>
-                        <td>{describePaymentMethod(p.paymentMethod)}</td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            fontWeight: 600,
-                            color: amountColor,
-                          }}
-                        >
-                          {formatCurrency(amountValue)}
-                        </td>
-                        <td className="status-cell">{describePaymentStatus(p.status)}</td>
-                        <td>{formatPaymentDateTime(stamp)}</td>
-                      </tr>
+                      <div key={item.id} className="timeline-item">
+                        <div className={`dot ${item.tone}`} />
+                        <div className="content">
+                          <div className="line1">
+                            <span className="when">{item.when}</span>
+                            <span className={`pill ${toneClass}`}>
+                              {item.typeLabel}
+                            </span>
+                          </div>
+                          <div className="line2">
+                            <span className="name">{item.name}</span>
+                            <span className="qty">
+                              × {Number(item.quantity).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="line3 muted">
+                            {item.barcode ? `บาร์โค้ด: ${item.barcode}` : ""}
+                          </div>
+                          {item.userName && (
+                            <div className="line4 muted">
+                              พนักงาน: {item.userName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
-                  {paymentsInRange.length === 0 && (
-                    <tr>
-                      <td colSpan={8} style={{ textAlign: "center", color: "#6b7280" }}>— ไม่มีรายการ —</td>
-                    </tr>
+                  {stockTimeline.length === 0 && (
+                    <div className="muted">— ไม่มีข้อมูล —</div>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                </div>
+              </div>
+            </section>
+
+            {/* Payment history */}
+            <section className="panel card-like area-payment">
+              <h2 className="section-title">ประวัติการขาย {rangeLabel}</h2>
+              <div className="table-scroll tall">
+                <table className="nice-table payment-table home-payment-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 60 }}>ลำดับ</th>
+                      <th>รหัสขาย</th>
+                      <th>พนักงาน</th>
+                      <th>ประเภท</th>
+                      <th>วิธีชำระ</th>
+                      <th style={{ textAlign: "right" }}>ยอดชำระ</th>
+                      <th>สถานะ</th>
+                      <th>วันที่</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentsInRange.map((p, idx) => {
+                      const stamp = p.createdAt || p.updatedAt;
+                      const amountValue = Number(p.amount ?? 0);
+                      const amountColor =
+                        amountValue < 0
+                          ? "#dc2626"
+                          : amountValue === 0
+                          ? "#1f2937"
+                          : "#047857";
+                      return (
+                        <tr key={`${p.id}-${idx}`}>
+                          <td>{idx + 1}</td>
+                          <td>{p.saleId}</td>
+                          <td>{p.employeeName}</td>
+                          <td className="type-cell">
+                            {describePaymentType(p.type, amountValue)}
+                          </td>
+                          <td>{describePaymentMethod(p.paymentMethod)}</td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              fontWeight: 600,
+                              color: amountColor,
+                            }}
+                          >
+                            {formatCurrency(amountValue)}
+                          </td>
+                          <td className="status-cell">
+                            {describePaymentStatus(p.status)}
+                          </td>
+                          <td>{formatPaymentDateTime(stamp)}</td>
+                        </tr>
+                      );
+                    })}
+                    {paymentsInRange.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          style={{ textAlign: "center", color: "#6b7280" }}
+                        >
+                          — ไม่มีรายการ —
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
