@@ -25,7 +25,11 @@ const LINE_CHART_HEIGHT = 320;
 const DEFAULT_IMG = "https://cdn-icons-png.flaticon.com/512/2331/2331970.png";
 
 const GRADIENTS = {
-  purple: { id: "employeeLineGradient", from: "#6C5CE7", to: "rgba(108,92,231,0.12)" },
+  purple: {
+    id: "employeeLineGradient",
+    from: "#6C5CE7",
+    to: "rgba(108,92,231,0.12)",
+  },
 };
 
 type RangeKey = "daily" | "weekly" | "monthly";
@@ -123,10 +127,15 @@ const describePaymentMethod = (method: string) => {
   if (value.includes("card") || value.includes("บัตร")) return "💳 บัตรเครดิต";
   if (value.includes("qr")) return "📱 QR Code";
   if (value.includes("cash") || value.includes("เงินสด")) return "💵 เงินสด";
-  if (value.includes("bank") || value.includes("transfer") || value.includes("โอน")) {
+  if (
+    value.includes("bank") ||
+    value.includes("transfer") ||
+    value.includes("โอน")
+  ) {
     return "🏦 โอนธนาคาร";
   }
-  if (value.includes("prompt") || value.includes("พร้อมเพย์")) return "📲 พร้อมเพย์";
+  if (value.includes("prompt") || value.includes("พร้อมเพย์"))
+    return "📲 พร้อมเพย์";
   if (!value) return "💠 ไม่ระบุ";
   return `💠 ${method}`;
 };
@@ -135,7 +144,8 @@ const describePaymentStatus = (status: string) => {
   const value = (status || "").toString().toLowerCase();
   if (value.includes("สำเร็จ") || value.includes("success")) return "✅ สำเร็จ";
   if (value.includes("ล้มเหลว") || value.includes("fail")) return "❌ ล้มเหลว";
-  if (value.includes("รอดำเนินการ") || value.includes("pending")) return "⏳ รอดำเนินการ";
+  if (value.includes("รอดำเนินการ") || value.includes("pending"))
+    return "⏳ รอดำเนินการ";
   if (!value) return "⏳ รอดำเนินการ";
   return status;
 };
@@ -145,7 +155,8 @@ const describePaymentType = (type: string, amount: number) => {
   if (normalized.includes("REFUND")) return "🔴 คืนเงิน";
   if (normalized.includes("SALE")) return "🟢 ขาย";
   if (normalized.includes("CANCEL")) return "⚪ ยกเลิก";
-  if (normalized.includes("HOLD") || normalized.includes("PENDING")) return "⏸️ รอชำระ";
+  if (normalized.includes("HOLD") || normalized.includes("PENDING"))
+    return "⏸️ รอชำระ";
   if (!normalized) {
     if (Number(amount) < 0) return "🔴 คืนเงิน";
     if (Number(amount) === 0) return "⚪ อื่นๆ";
@@ -240,10 +251,16 @@ export default function EmployeeDashboard() {
                   "-"
               ),
               paymentMethod:
-                item?.paymentMethod || item?.method || item?.channel || "ไม่ระบุ",
+                item?.paymentMethod ||
+                item?.method ||
+                item?.channel ||
+                "ไม่ระบุ",
               amount,
               profit: sanitizeNumber(
-                item?.profit ?? item?.netProfit ?? item?.totalProfit ?? item?.margin
+                item?.profit ??
+                  item?.netProfit ??
+                  item?.totalProfit ??
+                  item?.margin
               ),
               employeeName:
                 item?.employeeName ||
@@ -252,7 +269,8 @@ export default function EmployeeDashboard() {
                 item?.user?.name ||
                 item?.staffName ||
                 "-",
-              status: item?.status || item?.state || item?.paymentStatus || "ไม่ระบุ",
+              status:
+                item?.status || item?.state || item?.paymentStatus || "ไม่ระบุ",
               type: normalizedType,
               createdAt:
                 item?.createdAt ||
@@ -322,14 +340,19 @@ export default function EmployeeDashboard() {
 
     return (stockItems || [])
       .map((item: any) => {
-        const quantity = sanitizeNumber(item?.totalQuantity ?? item?.quantity ?? 0);
+        const quantity = sanitizeNumber(
+          item?.totalQuantity ?? item?.quantity ?? 0
+        );
         const thresholdValue = sanitizeNumber(item?.threshold ?? 0) || 5;
         const barcode = item?.barcode || item?.productId?.barcode || "-";
         const expiryDate = item?.expiryDate ? new Date(item.expiryDate) : null;
 
-        const isExpired = expiryDate ? expiryDate.getTime() < now.getTime() : false;
+        const isExpired = expiryDate
+          ? expiryDate.getTime() < now.getTime()
+          : false;
         const isNear = expiryDate
-          ? expiryDate.getTime() >= now.getTime() && expiryDate.getTime() <= nearThreshold.getTime()
+          ? expiryDate.getTime() >= now.getTime() &&
+            expiryDate.getTime() <= nearThreshold.getTime()
           : false;
         const isLow = quantity < thresholdValue;
 
@@ -376,8 +399,11 @@ export default function EmployeeDashboard() {
           statusLabel,
           statusTone,
           severity,
-          expirySort: expiryDate ? expiryDate.getTime() : Number.POSITIVE_INFINITY,
-          imageUrl: item?.productId?.imageUrl || imageMap.get(barcode) || DEFAULT_IMG,
+          expirySort: expiryDate
+            ? expiryDate.getTime()
+            : Number.POSITIVE_INFINITY,
+          imageUrl:
+            item?.productId?.imageUrl || imageMap.get(barcode) || DEFAULT_IMG,
         };
       })
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
@@ -416,7 +442,11 @@ export default function EmployeeDashboard() {
 
   const summaryForRange = summaryData?.summary?.[filter] || {};
   const rangeLabel =
-    filter === "daily" ? "วันนี้" : filter === "weekly" ? "สัปดาห์นี้" : "เดือนนี้";
+    filter === "daily"
+      ? "วันนี้"
+      : filter === "weekly"
+      ? "สัปดาห์นี้"
+      : "เดือนนี้";
   const lineTitle =
     filter === "daily"
       ? "กราฟยอดขายวันนี้ (รายชั่วโมง)"
@@ -435,8 +465,12 @@ export default function EmployeeDashboard() {
           entry,
           baseDate,
           index: idx,
-          sales: Number(entry?.netSales ?? entry?.totalSales ?? entry?.sales ?? 0),
-          profit: Number(entry?.totalProfit ?? entry?.profit ?? entry?.netProfit ?? 0),
+          sales: Number(
+            entry?.netSales ?? entry?.totalSales ?? entry?.sales ?? 0
+          ),
+          profit: Number(
+            entry?.totalProfit ?? entry?.profit ?? entry?.netProfit ?? 0
+          ),
           quantity: Number(
             entry?.totalQuantity ??
               entry?.quantity ??
@@ -447,7 +481,9 @@ export default function EmployeeDashboard() {
         };
       })
       .filter(
-        (item): item is {
+        (
+          item
+        ): item is {
           entry: any;
           baseDate: Date;
           index: number;
@@ -502,7 +538,8 @@ export default function EmployeeDashboard() {
               day: "2-digit",
               month: "short",
             });
-          sortValue = item.entry?.weekIndex ?? item.index ?? item.baseDate.getTime();
+          sortValue =
+            item.entry?.weekIndex ?? item.index ?? item.baseDate.getTime();
         }
         return { label, value: item.sales, sortValue };
       })
@@ -518,7 +555,11 @@ export default function EmployeeDashboard() {
     : Number(summaryForRange?.totalQuantity ?? summaryForRange?.quantity ?? 0);
 
   if (loading) {
-    return <div style={{ textAlign: "center", padding: 50 }}>⏳ กำลังตรวจสอบผู้ใช้...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: 50 }}>
+        ⏳ กำลังตรวจสอบผู้ใช้...
+      </div>
+    );
   }
 
   if (!user) {
@@ -530,216 +571,288 @@ export default function EmployeeDashboard() {
   }
 
   if (!summaryData) {
-    return <div style={{ textAlign: "center", padding: 50 }}>⏳ กำลังโหลดข้อมูล...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: 50 }}>
+        ⏳ กำลังโหลดข้อมูล...
+      </div>
+    );
   }
 
   return (
-    <div className="display employee-display">
-      <div className="employee-dashboard-shell">
-        <div className="employee-dashboard-card">
-          <div className="employee-grid">
-            <section className="card-like employee-area-top5">
-              <h2 className="section-title">สินค้าขายดี (Top 5)</h2>
-              <TopProductsSlider
-                items={topProductsFromApi.slice(0, 5)}
-                emptyMessage="ยังไม่มีการขายสินค้าในช่วงนี้"
-              />
-            </section>
+    <div className="display">
+      <div className="employee-display">
+        <div className="employee-dashboard-shell">
+          <div className="employee-dashboard-card">
+            <div className="employee-grid">
+              <section className="card-like employee-area-top5">
+                <h2 className="section-title">สินค้าขายดี (Top 5)</h2>
+                <TopProductsSlider
+                  items={topProductsFromApi.slice(0, 5)}
+                  emptyMessage="ยังไม่มีการขายสินค้าในช่วงนี้"
+                />
+              </section>
 
-            <section className="card-like employee-area-receipt">
-              <h2 className="section-title">{lineTitle}</h2>
-              <div className="employee-chart-rect">
-                {lineChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={LINE_CHART_HEIGHT}>
-                    <LineChart
-                      data={lineChartData}
-                      margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
+              <section className="card-like employee-area-receipt">
+                <h2 className="section-title">{lineTitle}</h2>
+                <div className="employee-chart-rect">
+                  {lineChartData.length > 0 ? (
+                    <ResponsiveContainer
+                      width="100%"
+                      height={LINE_CHART_HEIGHT}
                     >
-                      <defs>
-                        <linearGradient
-                          id={GRADIENTS.purple.id}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor={GRADIENTS.purple.from}
-                            stopOpacity={0.9}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor={GRADIENTS.purple.to}
-                            stopOpacity={0.4}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
-                      <YAxis />
-                      <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
-                      <Line type="monotone" dataKey="value" stroke="#6C5CE7" strokeWidth={2} dot={false} />
-                      <Area type="monotone" dataKey="value" stroke="none" fill="url(#employeeLineGradient)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="employee-chart-empty">ยังไม่มีข้อมูลการขายในช่วงนี้</div>
-                )}
-              </div>
-            </section>
+                      <LineChart
+                        data={lineChartData}
+                        margin={{ top: 20, right: 24, bottom: 28, left: 12 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id={GRADIENTS.purple.id}
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor={GRADIENTS.purple.from}
+                              stopOpacity={0.9}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor={GRADIENTS.purple.to}
+                              stopOpacity={0.4}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip
+                          formatter={(v: number) => formatCurrency(Number(v))}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#6C5CE7"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke="none"
+                          fill="url(#employeeLineGradient)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="employee-chart-empty">
+                      ยังไม่มีข้อมูลการขายในช่วงนี้
+                    </div>
+                  )}
+                </div>
+              </section>
 
-            <section className="card-like employee-area-stock">
-              <h2 className="section-title">สินค้าเหลือน้อย / ใกล้หมดอายุ</h2>
-              <div className="table-scroll tall">
-                <table className="nice-table employee-stock-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 60 }}>ลำดับ</th>
-                      <th>สินค้า</th>
-                      <th>สถานะ</th>
-                      <th style={{ textAlign: "right" }}>คงเหลือ</th>
-                      <th style={{ textAlign: "right" }}>จุดสั่งซื้อ</th>
-                      <th>วันหมดอายุ</th>
-                      <th>ซัพพลายเออร์</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowInventoryItems.map((item, idx) => (
-                      <tr key={`${item.id}-${idx}`}>
-                        <td>{idx + 1}</td>
-                        <td>
-                          <div className="employee-stock-product">
-                            <div className="employee-stock-thumb">
-                              <img src={item.imageUrl} alt={item.name} />
-                            </div>
-                            <div className="employee-stock-meta">
-                              <span className="employee-stock-name">{item.name}</span>
-                              <span className="employee-stock-barcode">{item.barcode}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`employee-stock-badge ${item.statusTone}`}>
-                            {item.statusLabel}
-                          </span>
-                        </td>
-                        <td className="employee-stock-qty">{item.quantity.toLocaleString()}</td>
-                        <td className="employee-stock-threshold">{item.threshold.toLocaleString()}</td>
-                        <td>
-                          <div className="employee-stock-date">{item.expiryText}</div>
-                          {item.expiryHint && (
-                            <div className="employee-stock-date-hint">{item.expiryHint}</div>
-                          )}
-                        </td>
-                        <td>{item.supplier}</td>
-                      </tr>
-                    ))}
-                    {lowInventoryItems.length === 0 && (
+              <section className="card-like employee-area-stock">
+                <h2 className="section-title">สินค้าเหลือน้อย / ใกล้หมดอายุ</h2>
+                <div className="table-scroll tall">
+                  <table className="nice-table employee-stock-table">
+                    <thead>
                       <tr>
-                        <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
-                          ✅ สินค้าพร้อมขายเพียงพอในช่วงนี้
-                        </td>
+                        <th style={{ width: 60 }}>ลำดับ</th>
+                        <th>สินค้า</th>
+                        <th>สถานะ</th>
+                        <th style={{ textAlign: "right" }}>คงเหลือ</th>
+                        <th>วันหมดอายุ</th>
+                        <th>ซัพพลายเออร์</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <div className="card-like kpi employee-area-kpi1">
-              <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
-              <div className="kpi-val">{formatCurrency(netSalesTotal)}</div>
-            </div>
-
-            <div className="card-like kpi employee-area-kpi2">
-              <div className="kpi-head">จำนวนที่ขาย ({rangeLabel})</div>
-              <div className="kpi-val">{Number(quantityTotal).toLocaleString()} ชิ้น</div>
-            </div>
-
-            <section className="card-like employee-area-payment">
-              <h2 className="section-title">ประวัติการขาย {rangeLabel}</h2>
-              <div className="table-scroll tall">
-                <table className="employee-stock-table employee-payment-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 60 }}>ลำดับ</th>
-                      <th>รหัสขาย</th>
-                      <th>ประเภท</th>
-                      <th>วิธีชำระ</th>
-                      <th style={{ textAlign: "right" }}>ยอดชำระ</th>
-                      <th>สถานะ</th>
-                      <th>วันที่</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paymentsInRange.map((p, idx) => {
-                      const stamp = p.createdAt || p.updatedAt;
-                      const amountValue = Number(p.amount ?? 0);
-                      const amountColor =
-                        amountValue < 0 ? "#dc2626" : amountValue === 0 ? "#1f2937" : "#047857";
-                      const typeLabel = describePaymentType(p.type, amountValue);
-                      const methodLabel = describePaymentMethod(p.paymentMethod);
-                      const statusLabel = describePaymentStatus(p.status);
-                      const statusTone = statusLabel.includes("✅")
-                        ? "success"
-                        : statusLabel.includes("❌")
-                        ? "danger"
-                        : statusLabel.includes("⏳")
-                        ? "pending"
-                        : "neutral";
-                      const typeTone = typeLabel.includes("🔴")
-                        ? "refund"
-                        : typeLabel.includes("⏸")
-                        ? "hold"
-                        : "sale";
-                      const typeIcon =
-                        typeTone === "refund" ? "↩️" : typeTone === "hold" ? "⏸️" : "🧾";
-                      return (
-                        <tr key={`${p.id}-${idx}`}>
+                    </thead>
+                    <tbody>
+                      {lowInventoryItems.map((item, idx) => (
+                        <tr key={`${item.id}-${idx}`}>
                           <td>{idx + 1}</td>
                           <td>
-                            <div className="employee-payment-sale">
-                              <div className="employee-payment-pill">{typeIcon}</div>
-                              <div className="employee-payment-meta">
-                                <span className="employee-payment-id">{p.saleId}</span>
-                                <span className="employee-payment-staff">พนักงาน: {p.employeeName}</span>
+                            <div className="employee-stock-product">
+                              <div className="employee-stock-thumb">
+                                <img src={item.imageUrl} alt={item.name} />
+                              </div>
+                              <div className="employee-stock-meta">
+                                <span className="employee-stock-name">
+                                  {item.name}
+                                </span>
+                                <span className="employee-stock-barcode">
+                                  {item.barcode}
+                                </span>
                               </div>
                             </div>
                           </td>
-                          <td className="type-cell">
-                            <span className={`employee-payment-chip type ${typeTone}`}>
-                              {typeLabel}
+                          <td>
+                            <span
+                              className={`employee-stock-badge ${item.statusTone}`}
+                            >
+                              {item.statusLabel}
                             </span>
                           </td>
-                          <td>
-                            <span className="employee-payment-chip method">{methodLabel}</span>
-                          </td>
-                          <td className="employee-payment-amount" style={{ color: amountColor }}>
-                            {formatCurrency(amountValue)}
-                          </td>
-                          <td className="status-cell">
-                            <span className={`employee-payment-chip status ${statusTone}`}>
-                              {statusLabel}
-                            </span>
+                          <td className="employee-stock-qty">
+                            {item.quantity.toLocaleString()}
                           </td>
                           <td>
-                            <div className="employee-payment-date">{formatPaymentDateTime(stamp)}</div>
+                            <div className="employee-stock-date">
+                              {item.expiryText}
+                            </div>
+                            {item.expiryHint && (
+                              <div className="employee-stock-date-hint">
+                                {item.expiryHint}
+                              </div>
+                            )}
+                          </td>
+                          <td>{item.supplier}</td>
+                        </tr>
+                      ))}
+                      {lowInventoryItems.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            style={{ textAlign: "center", color: "#6b7280" }}
+                          >
+                            ✅ สินค้าพร้อมขายเพียงพอในช่วงนี้
                           </td>
                         </tr>
-                      );
-                    })}
-                    {paymentsInRange.length === 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: "center", color: "#6b7280" }}>
-                          ยังไม่มีการขายสินค้าในช่วงนี้
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <div className="card-like kpi employee-area-kpi1">
+                <div className="kpi-head">ยอดขายสุทธิ ({rangeLabel})</div>
+                <div className="kpi-val">{formatCurrency(netSalesTotal)}</div>
               </div>
-            </section>
+
+              <div className="card-like kpi employee-area-kpi2">
+                <div className="kpi-head">จำนวนที่ขาย ({rangeLabel})</div>
+                <div className="kpi-val">
+                  {Number(quantityTotal).toLocaleString()} ชิ้น
+                </div>
+              </div>
+
+              <section className="card-like employee-area-payment">
+                <h2 className="section-title">ประวัติการขาย {rangeLabel}</h2>
+                <div className="table-scroll tall">
+                  <table className="employee-stock-table employee-payment-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 60 }}>ลำดับ</th>
+                        <th>รหัสขาย</th>
+                        <th>ประเภท</th>
+                        <th>วิธีชำระ</th>
+                        <th style={{ textAlign: "right" }}>ยอดชำระ</th>
+                        <th>สถานะ</th>
+                        <th>วันที่</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentsInRange.map((p, idx) => {
+                        const stamp = p.createdAt || p.updatedAt;
+                        const amountValue = Number(p.amount ?? 0);
+                        const amountColor =
+                          amountValue < 0
+                            ? "#dc2626"
+                            : amountValue === 0
+                            ? "#1f2937"
+                            : "#047857";
+                        const typeLabel = describePaymentType(
+                          p.type,
+                          amountValue
+                        );
+                        const methodLabel = describePaymentMethod(
+                          p.paymentMethod
+                        );
+                        const statusLabel = describePaymentStatus(p.status);
+                        const statusTone = statusLabel.includes("✅")
+                          ? "success"
+                          : statusLabel.includes("❌")
+                          ? "danger"
+                          : statusLabel.includes("⏳")
+                          ? "pending"
+                          : "neutral";
+                        const typeTone = typeLabel.includes("🔴")
+                          ? "refund"
+                          : typeLabel.includes("⏸")
+                          ? "hold"
+                          : "sale";
+                        const typeIcon =
+                          typeTone === "refund"
+                            ? "↩️"
+                            : typeTone === "hold"
+                            ? "⏸️"
+                            : "🧾";
+                        return (
+                          <tr key={`${p.id}-${idx}`}>
+                            <td>{idx + 1}</td>
+                            <td>
+                              <div className="employee-payment-sale">
+                                <div className="employee-payment-pill">
+                                  {typeIcon}
+                                </div>
+                                <div className="employee-payment-meta">
+                                  <span className="employee-payment-id">
+                                    {p.saleId}
+                                  </span>
+                                  <span className="employee-payment-staff">
+                                    พนักงาน: {p.employeeName}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="type-cell">
+                              <span
+                                className={`employee-payment-chip type ${typeTone}`}
+                              >
+                                {typeLabel}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="employee-payment-chip method">
+                                {methodLabel}
+                              </span>
+                            </td>
+                            <td
+                              className="employee-payment-amount"
+                              style={{ color: amountColor }}
+                            >
+                              {formatCurrency(amountValue)}
+                            </td>
+                            <td className="status-cell">
+                              <span
+                                className={`employee-payment-chip status ${statusTone}`}
+                              >
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="employee-payment-date">
+                                {formatPaymentDateTime(stamp)}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {paymentsInRange.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            style={{ textAlign: "center", color: "#6b7280" }}
+                          >
+                            ยังไม่มีการขายสินค้าในช่วงนี้
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>
