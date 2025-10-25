@@ -12,11 +12,11 @@ import {
 const router = Router();
 
 // 📦 Product Routes
-router.get('/Product', getProducts)
-router.get('/:barcode', getProductByBarcode);
-
-router.get("/AllProduct", getAllProducts);        // ✅ ทุก product
+router.get("/Product", getProducts);
+router.get("/get", getProducts); // legacy alias used by older clients
+router.get("/AllProduct", getAllProducts);
 router.get("/category/:category", getProductsByCategory);
+router.get("/barcode/:barcode", getProductByBarcode);
 router.get("/:id/batches", getBatchesByProduct);
 router.put("/:id", updateProduct);
 router.patch("/:id", updateProduct);
