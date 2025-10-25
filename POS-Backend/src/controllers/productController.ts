@@ -1,452 +1,555 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import PurchaseOrder from "../models/PurchaseOrder";
-import { verifyToken } from "../utils/auth";
-import { generateInvoiceNumber } from "../utils/generateInvoice";
-import { generateBatchNumber } from "../utils/generateBatch";
-
+import Product from "../models/Product";
+import Category from "../models/Category";
 import Stock from "../models/Stock";
 import StockLot from "../models/StockLot";
-import Supplier from "../models/Supplier";
-import Warehouse from "../models/Warehouse";
-import Product from "../models/Product";
-import StockTransaction from "../models/StockTransaction";
-
 import User from "../models/User";
 import Employee from "../models/Employee";
+import { verifyToken } from "../utils/auth";
 
-/* ========================================================
-   🔧 Helper: หา document จาก id หรือชื่อ
-======================================================== */
-async function ensureObjectIdOrByName(model: any, value: any, nameField: string) {
-    if (!value) return null;
-    if (mongoose.Types.ObjectId.isValid(value)) {
-        return await model.findById(value).lean();
-    }
-    return await model.findOne({ [nameField]: value }).lean();
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
-/* ========================================================
-   🔑 Helper: resolve ownerId (string เสมอ)
-======================================================== */
-async function getOwnerId(userId: string): Promise<string> {
-    let user: any = await User.findById(userId).lean();
-    if (!user) user = await Employee.findById(userId).lean();
-    if (!user) throw new Error("User not found");
+type PlainDoc = Record<string, any>;
 
-    if (user.role === "admin") return user._id.toString();
-    if (user.role === "employee") {
-        if (!user.adminId) throw new Error("Employee does not have admin assigned");
-        return user.adminId.toString();
-    }
-    throw new Error("Invalid user role");
+interface AuthContext {
+  ownerId: string;
+  actorId: string;
 }
 
-/* ========================================================
-   🧰 Scope ที่ “แมตช์ให้เจอให้ได้”
-   - รองรับ userId แบบ ObjectId และ string
-   - ครอบคลุมกรณีสร้างโดย employee (createdBy = actor)
-======================================================== */
-function buildPoScope(ownerId: string, actorId?: string) {
-    const or: any[] = [
-        { userId: new mongoose.Types.ObjectId(ownerId) },
-        { userId: ownerId },
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeCategoryRef = (
+  category: unknown
+): { _id: string; name: string } | null => {
+  if (!category) {
+    return null;
+  }
+
+  if (typeof category === "string") {
+    return { _id: category, name: category };
+  }
+
+  if (typeof category === "object") {
+    const cat: PlainDoc = category as PlainDoc;
+    const idValue = cat._id || cat.id;
+    if (!idValue) {
+      return null;
+    }
+    const id = typeof idValue === "string" ? idValue : String(idValue);
+    const name = typeof cat.name === "string" && cat.name.trim() ? cat.name : id;
+    return { _id: id, name };
+  }
+
+  return null;
+};
+
+const resolveOwnerId = async (userId: string): Promise<string> => {
+  const admin = (await User.findById(userId).lean()) as PlainDoc | null;
+  if (admin) {
+    const role = typeof admin.role === "string" ? admin.role : "";
+    if (role === "admin") {
+      return String(admin._id);
+    }
+    if (role === "employee" && admin.adminId) {
+      return String(admin.adminId);
+    }
+  }
+
+  const employee = (await Employee.findById(userId).lean()) as PlainDoc | null;
+  if (employee) {
+    const role = typeof employee.role === "string" ? employee.role : "";
+    if (role === "admin") {
+      return String(employee._id);
+    }
+    if (role === "employee" && employee.adminId) {
+      return String(employee.adminId);
+    }
+  }
+
+  throw new HttpError(401, "Unauthorized");
+};
+
+const getAuthContext = async (req: Request): Promise<AuthContext> => {
+  const header = req.headers["authorization"];
+  if (!header) {
+    throw new HttpError(401, "Unauthorized");
+  }
+
+  const rawToken = Array.isArray(header) ? header[0] : header;
+  const token = rawToken.startsWith("Bearer ") ? rawToken.split(" ")[1] : rawToken;
+  if (!token) {
+    throw new HttpError(401, "Unauthorized");
+  }
+
+  let decoded: unknown;
+  try {
+    decoded = verifyToken(token);
+  } catch (error) {
+    throw new HttpError(401, "Invalid token");
+  }
+
+  if (typeof decoded !== "object" || decoded === null || !("userId" in decoded)) {
+    throw new HttpError(401, "Invalid token");
+  }
+
+  const actorId = String((decoded as PlainDoc).userId);
+  const ownerId = await resolveOwnerId(actorId);
+
+  return { ownerId, actorId };
+};
+
+const loadStocksForOwner = async (ownerId: string): Promise<PlainDoc[]> => {
+  const stocks = await Stock.find({ userId: ownerId })
+    .populate({
+      path: "productId",
+      populate: { path: "category", select: "name" },
+    })
+    .populate("supplierId", "companyName")
+    .populate("location", "name code")
+    .lean();
+
+  return (stocks as PlainDoc[]) ?? [];
+};
+
+const handleControllerError = (res: Response, error: unknown, message: string): void => {
+  if (error instanceof HttpError) {
+    res.status(error.status).json({ success: false, message: error.message });
+    return;
+  }
+
+  console.error(message, error);
+  res.status(500).json({ success: false, message });
+};
+
+export const getProducts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const stocks = await loadStocksForOwner(ownerId);
+
+    res.status(200).json({ success: true, data: stocks });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching products");
+  }
+};
+
+export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const products = await Product.find({ userId: ownerId })
+      .populate("category", "name")
+      .populate("supplierId", "companyName")
+      .lean();
+
+    res.status(200).json({ success: true, data: (products as PlainDoc[]) ?? [] });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching product list");
+  }
+};
+
+export const getProductsByCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { category } = req.params;
+
+    const stocks = await loadStocksForOwner(ownerId);
+    const normalizedParam = category.trim().toLowerCase();
+
+    const filtered = stocks.filter((item) => {
+      const productCategory = normalizeCategoryRef(item?.productId?.category);
+      if (!productCategory) {
+        return false;
+      }
+
+      return (
+        productCategory._id === category ||
+        productCategory.name.toLowerCase() === normalizedParam
+      );
+    });
+
+    res.status(200).json({ success: true, data: filtered });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while filtering products by category");
+  }
+};
+
+export const getProductByBarcode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { barcode } = req.params;
+    const sanitizedBarcode = barcode.trim();
+
+    const stock = (await Stock.findOne({ barcode: sanitizedBarcode, userId: ownerId })
+      .populate({
+        path: "productId",
+        populate: { path: "category", select: "name" },
+      })
+      .lean()) as PlainDoc | null;
+
+    if (stock?.productId) {
+      const product = stock.productId as PlainDoc;
+      const category = normalizeCategoryRef(product.category);
+
+      res.status(200).json({
+        success: true,
+        message: "พบสินค้า",
+        _id: product._id ? String(product._id) : sanitizedBarcode,
+        name: product.name,
+        description: product.description,
+        barcode: product.barcode ?? sanitizedBarcode,
+        imageUrl: product.imageUrl ?? "",
+        price: stock.salePrice ?? product.price ?? 0,
+        category,
+        stock: {
+          stockId: stock._id ? String(stock._id) : undefined,
+          totalQuantity: stock.totalQuantity ?? 0,
+          salePrice: stock.salePrice ?? 0,
+          costPrice: stock.costPrice ?? 0,
+          status: stock.status,
+        },
+      });
+      return;
+    }
+
+    const product = (await Product.findOne({ barcode: sanitizedBarcode, userId: ownerId })
+      .populate("category", "name")
+      .lean()) as PlainDoc | null;
+
+    if (product) {
+      const category = normalizeCategoryRef(product.category);
+      res.status(200).json({
+        success: true,
+        message: "พบสินค้า",
+        _id: product._id ? String(product._id) : sanitizedBarcode,
+        name: product.name,
+        description: product.description,
+        barcode: product.barcode,
+        imageUrl: product.imageUrl ?? "",
+        price: product.price ?? 0,
+        category,
+      });
+      return;
+    }
+
+    res.status(404).json({ success: false, message: "ไม่พบสินค้าในระบบ" });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching product by barcode");
+  }
+};
+
+export const updateProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "รหัสสินค้าไม่ถูกต้อง" });
+      return;
+    }
+
+    const payload: PlainDoc = {};
+    const allowedFields = [
+      "name",
+      "description",
+      "category",
+      "barcode",
+      "productCode",
+      "imageUrl",
+      "public_id",
+      "supplierId",
+      "isSelfPurchased",
+      "isActive",
     ];
-    if (actorId) {
-        // PO เก่าๆ ที่ไม่ได้เซ็ต userId แต่มี createdBy เป็นคนกดสร้าง
-        or.push({ createdBy: actorId });
-        // บางระบบเคยใช้ userId = actorId
-        or.push({ userId: actorId });
-        // และเผื่อกรณีเป็น ObjectId
-        if (mongoose.Types.ObjectId.isValid(actorId)) {
-            or.push({ createdBy: new mongoose.Types.ObjectId(actorId) });
-            or.push({ userId: new mongoose.Types.ObjectId(actorId) });
-        }
+
+    allowedFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        payload[field] = req.body[field];
+      }
+    });
+
+    if (payload.category && typeof payload.category === "object") {
+      const categoryRef = normalizeCategoryRef(payload.category);
+      payload.category = categoryRef?._id;
     }
-    return { $or: or };
-}
 
-/* ==========================
-   ดึงรายการ Purchase Orders ทั้งหมด (ของ owner)
-========================== */
-export const getPurchaseOrders = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
-
-        const orders = await PurchaseOrder.find(buildPoScope(ownerId, actorId))
-            .populate("supplierId")
-            .populate("location")
-            .populate("createdBy")
-            .populate("updatedBy")
-            .populate("items.productId", "name barcode")
-            .populate("items.stockId")
-            .populate("stockLots", "_id batchNumber status qcStatus")
-            .sort({ createdAt: -1 })
-            .lean();
-
-        res.status(200).json({ success: true, message: "ดึงรายการ PO สำเร็จ", data: orders || [] });
-    } catch (error) {
-        console.error("Get PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while fetching POs" });
+    if (payload.supplierId && typeof payload.supplierId === "object") {
+      const supplier = payload.supplierId as PlainDoc;
+      const supplierId = supplier._id || supplier.id;
+      if (supplierId) {
+        payload.supplierId = supplierId;
+      }
     }
+
+    const product = (await Product.findOneAndUpdate(
+      { _id: id, userId: ownerId },
+      { $set: payload },
+      { new: true }
+    )
+      .populate("category", "name")
+      .populate("supplierId", "companyName")
+      .lean()) as PlainDoc | null;
+
+    if (!product) {
+      res.status(404).json({ success: false, message: "ไม่พบสินค้า" });
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "isActive")) {
+      await Stock.updateMany(
+        { productId: id, userId: ownerId },
+        { $set: { isActive: payload.isActive } }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "อัปเดตข้อมูลสินค้าสำเร็จ",
+      data: product,
+    });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while updating product");
+  }
 };
 
-/* ==========================
-   📄 ดึงรายละเอียด PO ตาม ID (ของ owner)
-========================== */
-export const getPurchaseOrderById = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
+export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { id } = req.params;
 
-        const { id } = req.params;
-
-        const po = await PurchaseOrder.findOne({ _id: id, ...buildPoScope(ownerId, actorId) })
-            .populate("supplierId", "companyName phoneNumber email")
-            .populate("location", "name code")
-            .populate("createdBy", "username email role")
-            .populate("updatedBy", "username email role")
-            .populate("items.productId", "name barcode")
-            .populate("items.stockId", "totalQuantity status")
-            .populate({
-                path: "stockLots",
-                populate: [
-                    { path: "productId", select: "name barcode" },
-                    { path: "stockId", select: "totalQuantity status" },
-                    { path: "supplierId", select: "companyName" },
-                    { path: "location", select: "name" },
-                ],
-            })
-            .lean();
-
-        if (!po) { res.status(404).json({ success: false, message: "ไม่พบ PurchaseOrder" }); return; }
-
-        res.status(200).json({ success: true, message: "ดึงข้อมูล PO สำเร็จ ✅", data: po });
-    } catch (error) {
-        console.error("❌ Get PO By ID Error:", error);
-        res.status(500).json({ success: false, message: "Server error while fetching PO" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "รหัสสินค้าไม่ถูกต้อง" });
+      return;
     }
+
+    const product = (await Product.findOneAndDelete({ _id: id, userId: ownerId }).lean()) as
+      | PlainDoc
+      | null;
+    if (!product) {
+      res.status(404).json({ success: false, message: "ไม่พบสินค้า" });
+      return;
+    }
+
+    await Promise.all([
+      Stock.deleteMany({ productId: id, userId: ownerId }),
+      StockLot.deleteMany({ productId: id, userId: ownerId }),
+    ]);
+
+    res.status(200).json({ success: true, message: "ลบสินค้าสำเร็จ" });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while deleting product");
+  }
 };
 
-/* ==========================
-   📋 ดึงรายการ PO ทั้งหมด (สรุป) ของ owner
-========================== */
-export const getAllPurchaseOrders = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
+export const getBatchesByProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { id } = req.params;
 
-        const purchaseOrders = await PurchaseOrder.find(buildPoScope(ownerId, actorId))
-            .populate("supplierId", "companyName")
-            .populate("location", "name code")
-            .populate("stockLots", "_id status qcStatus")
-            .sort({ createdAt: -1 })
-            .lean();
-
-        res.status(200).json({
-            success: true,
-            message: "ดึงรายการใบสั่งซื้อสำเร็จ ✅",
-            data: (purchaseOrders || []).map((po: any) => ({
-                _id: po._id,
-                purchaseOrderNumber: po.purchaseOrderNumber,
-                supplierCompany: po?.supplierId?.companyName || "ไม่ระบุ",
-                totalLots: (po?.stockLots || []).length || 0,
-                qcStatus: po?.qcStatus || "รอตรวจสอบ",
-                status: po.status,
-                createdAt: po.createdAt,
-            })),
-        });
-    } catch (error) {
-        console.error("❌ Get All PO Error:", error);
-        res.status(500).json({ success: false, message: "ไม่สามารถดึงข้อมูลใบสั่งซื้อได้", error });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "รหัสสินค้าไม่ถูกต้อง" });
+      return;
     }
+
+    const batches = (await StockLot.find({ productId: id, userId: ownerId })
+      .populate("supplierId", "companyName")
+      .populate("location", "name code")
+      .sort({ createdAt: -1 })
+      .lean()) as PlainDoc[];
+
+    res.status(200).json({ success: true, data: batches ?? [] });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching product batches");
+  }
 };
 
-/* ========================================================
-   🧾 CREATE PURCHASE ORDER → บันทึก userId เป็น "string" (มาตรฐาน)
-======================================================== */
-export const createPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized, no token" }); return; }
+export const getCategories = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const products = (await Product.find({ userId: ownerId })
+      .populate("category", "name")
+      .lean()) as PlainDoc[];
 
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId); // ← string
+    const categories = new Map<string, { _id: string; name: string }>();
 
-        const { purchaseOrderNumber, supplierId, supplierCompany, location, items, invoiceNumber } = req.body;
-        if (!Array.isArray(items) || items.length === 0) {
-            res.status(400).json({ success: false, message: "Items are required" }); return;
-        }
+    products.forEach((product) => {
+      const category = normalizeCategoryRef(product.category);
+      if (category) {
+        categories.set(category._id, category);
+      }
+    });
 
-        const supplierDoc = await ensureObjectIdOrByName(Supplier, supplierId, "companyName");
-        if (!supplierDoc) { res.status(400).json({ success: false, message: "ไม่พบ Supplier" }); return; }
-
-        const warehouseDoc =
-            (await ensureObjectIdOrByName(Warehouse, location, "name")) ||
-            (await Warehouse.findOne({ name: location }).lean());
-        if (!warehouseDoc) { res.status(400).json({ success: false, message: "ไม่พบคลังสินค้า" }); return; }
-
-        const itemsWithTotal = items.map((it: any) => ({
-            ...it,
-            total: Number(it.quantity || 0) * Number(it.costPrice || 0),
-        }));
-        const totalAmount = itemsWithTotal.reduce((sum: number, it: any) => sum + Number(it.total || 0), 0);
-
-        const po = await PurchaseOrder.create({
-            userId: ownerId, // ⬅ เซ็ตเป็น string ให้สม่ำเสมอ
-            purchaseOrderNumber,
-            supplierId: (supplierDoc as any)._id,
-            supplierCompany: supplierCompany ?? (supplierDoc as any).companyName,
-            location: (warehouseDoc as any)._id,
-            items: itemsWithTotal,
-            totalAmount,
-            invoiceNumber: invoiceNumber || generateInvoiceNumber(),
-            createdBy: actorId, // คนกดสร้าง (employee/admin)
-            status: "รอดำเนินการ",
-            stockLots: [],
-        });
-
-        res.status(201).json({ success: true, message: "สร้างใบสั่งซื้อสำเร็จ", data: po });
-    } catch (error) {
-        console.error("❌ Create PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while creating PO" });
+    if (categories.size === 0) {
+      const fallback = (await Category.find({ adminId: ownerId }).sort({ name: 1 }).lean()) as PlainDoc[];
+      fallback.forEach((item) => {
+        categories.set(String(item._id), { _id: String(item._id), name: item.name });
+      });
     }
+
+    res.status(200).json({ success: true, data: Array.from(categories.values()) });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching categories");
+  }
 };
 
-/* ========================================================
-   ✅ CONFIRM PO → ผูก owner บน stock/lot
-======================================================== */
-export const confirmPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
-        const ownerObjId = new mongoose.Types.ObjectId(ownerId);
+export const fetchCategories = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
 
-        const po = await PurchaseOrder.findOne({ _id: id, ...buildPoScope(ownerId, actorId) });
-        if (!po) { res.status(404).json({ success: false, message: "ไม่พบใบสั่งซื้อ" }); return; }
-        if (po.status !== "รอดำเนินการ") {
-            res.status(400).json({ success: false, message: "PO นี้ถูกยืนยันแล้ว" }); return;
-        }
+    const [categories, productRefs] = await Promise.all([
+      Category.find({ adminId: ownerId }).sort({ name: 1 }).lean(),
+      Product.find({ userId: ownerId }, "category").lean(),
+    ]);
 
-        const supplierDoc = await Supplier.findById(po.supplierId).lean<{ _id: mongoose.Types.ObjectId; companyName: string; code?: string } | null>();
-        const warehouseDoc = await Warehouse.findById(po.location).lean<{ _id: mongoose.Types.ObjectId; name: string; code?: string } | null>();
-        if (!supplierDoc || !warehouseDoc) {
-            res.status(400).json({ success: false, message: "ไม่พบข้อมูล Supplier หรือ Warehouse" }); return;
-        }
+    const usageCount = new Map<string, number>();
+    (productRefs as PlainDoc[]).forEach((product) => {
+      const category = normalizeCategoryRef(product.category);
+      if (category) {
+        usageCount.set(category._id, (usageCount.get(category._id) ?? 0) + 1);
+      }
+    });
 
-        const supplierCode = supplierDoc.code ?? "SP00";
-        const warehouseCode = warehouseDoc.code ?? "WH00";
-        const stockLotIds: mongoose.Types.ObjectId[] = [];
+    const data = (categories as PlainDoc[]).map((category) => ({
+      _id: String(category._id),
+      name: category.name,
+      description: category.description ?? "",
+      totalProducts: usageCount.get(String(category._id)) ?? 0,
+    }));
 
-        for (const rawItem of (po.items as any[])) {
-            const batchNumber =
-                rawItem.batchNumber && String(rawItem.batchNumber).trim() !== ""
-                    ? String(rawItem.batchNumber).trim()
-                    : await generateBatchNumber(warehouseCode, supplierCode, rawItem.productId.toString());
-
-            const productDoc = await Product.findById(rawItem.productId)
-                .select("barcode name")
-                .lean<{ _id: mongoose.Types.ObjectId; barcode: string; name: string } | null>();
-            if (!productDoc) continue;
-
-            let stock = await Stock.findOne({
-                userId: ownerObjId,
-                productId: rawItem.productId,
-                location: warehouseDoc._id,
-            });
-
-            if (!stock) {
-                stock = await Stock.create({
-                    userId: ownerObjId,
-                    productId: rawItem.productId,
-                    supplierId: supplierDoc._id,
-                    supplierName: supplierDoc.companyName,
-                    location: warehouseDoc._id,
-                    barcode: productDoc.barcode,
-                    totalQuantity: 0,
-                    threshold: rawItem.threshold ?? 5,
-                    status: "สินค้าพร้อมขาย",
-                    isActive: true,
-                });
-            }
-
-            const stockLot = await StockLot.create({
-                stockId: stock._id,
-                productId: rawItem.productId,
-                supplierId: supplierDoc._id,
-                supplierName: supplierDoc.companyName,
-                userId: ownerObjId, // ผูก owner
-                location: warehouseDoc._id,
-                purchaseOrderNumber: po.purchaseOrderNumber,
-                barcode: productDoc.barcode,
-                batchNumber,
-                expiryDate: rawItem.expiryDate,
-                quantity: rawItem.quantity,
-                costPrice: rawItem.costPrice,
-                salePrice: rawItem.salePrice ?? rawItem.costPrice,
-                status: "รอตรวจสอบ QC",
-                isActive: false,
-                isTemporary: true,
-                purchaseOrderId: po._id,
-            });
-
-            rawItem.batchNumber = batchNumber;
-            rawItem.stockLotId = stockLot._id;
-            stockLotIds.push(stockLot._id);
-        }
-
-        po.status = "ได้รับสินค้าแล้ว";
-        po.qcStatus = "รอตรวจสอบ";
-        po.stockLots = stockLotIds;
-        po.receivedAt = new Date();
-        po.updatedBy = actorId;
-        po.markModified("items");
-        await po.save();
-
-        res.status(200).json({
-            success: true,
-            message: "✅ ยืนยันใบสั่งซื้อสำเร็จ (สร้างล็อตและ batchNumber แล้ว)",
-            data: po,
-        });
-    } catch (error) {
-        console.error("❌ Confirm PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while confirming PO" });
-    }
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while fetching category list");
+  }
 };
 
-/* ========================================================
-   🔁 RETURN PURCHASE ORDER
-======================================================== */
-export const returnPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
-        const ownerObjId = new mongoose.Types.ObjectId(ownerId);
+export const addCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { name, description } = req.body;
 
-        const po = await PurchaseOrder.findOne({ _id: id, ...buildPoScope(ownerId, actorId) });
-        if (!po) { res.status(404).json({ success: false, message: "ไม่พบ PurchaseOrder" }); return; }
-        if (po.status !== "ไม่ผ่าน QC - รอส่งคืนสินค้า") {
-            res.status(400).json({ success: false, message: "PO นี้ไม่สามารถคืนสินค้าได้" }); return;
-        }
-
-        for (const item of (po.items as any[])) {
-            const lot = await StockLot.findOne({ _id: item.stockLotId, userId: ownerObjId });
-            if (!lot) continue;
-
-            lot.status = "รอคัดออก";
-            lot.isActive = false;
-            lot.isTemporary = true;
-            await lot.save();
-
-            await StockTransaction.create({
-                userId: ownerObjId,
-                stockId: (lot as any).stockId,
-                productId: (lot as any).productId,
-                stockLotId: lot._id,
-                type: "RETURN",
-                quantity: item.quantity,
-                costPrice: item.costPrice,
-                notes: `คืนสินค้า | PO ${po.purchaseOrderNumber} | Batch ${lot.batchNumber}`,
-            });
-        }
-
-        po.status = "ไม่ผ่าน QC - คืนสินค้าแล้ว";
-        po.returnedAt = new Date();
-        po.updatedBy = actorId;
-        await po.save();
-
-        res.status(200).json({ success: true, message: "คืนสินค้าเรียบร้อย ✅", data: po });
-    } catch (error) {
-        console.error("❌ Return PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while returning PO" });
+    if (!name || typeof name !== "string" || !name.trim()) {
+      res.status(400).json({ success: false, message: "กรุณาระบุชื่อหมวดหมู่" });
+      return;
     }
+
+    const normalizedName = name.trim();
+    const existing = await Category.findOne({
+      adminId: ownerId,
+      name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+    }).lean();
+
+    if (existing) {
+      res.status(409).json({ success: false, message: "มีหมวดหมู่นี้อยู่แล้ว" });
+      return;
+    }
+
+    const category = await Category.create({
+      name: normalizedName,
+      description,
+      adminId: new mongoose.Types.ObjectId(ownerId),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "สร้างหมวดหมู่สำเร็จ",
+      data: {
+        _id: String(category._id),
+        name: category.name,
+        description: category.description ?? "",
+      },
+    });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while creating category");
+  }
 };
 
-/* ========================================================
-   ❌ CANCEL PURCHASE ORDER
-======================================================== */
-export const cancelPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const raw = req.headers["authorization"];
-        const token = typeof raw === "string" ? raw.split(" ")[1] : undefined;
-        if (!token) { res.status(401).json({ success: false, message: "Unauthorized, no token" }); return; }
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" }); return;
-        }
-        const actorId = decoded.userId;
-        const ownerId = await getOwnerId(actorId);
+export const updateCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { id } = req.params;
+    const { name, description } = req.body;
 
-        const { id } = req.params;
-        const po = await PurchaseOrder.findOne({ _id: id, ...buildPoScope(ownerId, actorId) });
-        if (!po) { res.status(404).json({ success: false, message: "ไม่พบ PurchaseOrder" }); return; }
-
-        if (po.status !== "รอดำเนินการ") {
-            res.status(400).json({
-                success: false,
-                message: "ไม่สามารถยกเลิก PO ที่ได้รับสินค้าแล้วหรืออยู่ในขั้นตอน QC ได้",
-            });
-            return;
-        }
-
-        po.status = "ยกเลิก";
-        po.updatedBy = actorId;
-        await po.save();
-
-        const lotIds = (po.items as any[]).map(x => x.stockLotId).filter(Boolean);
-        if (lotIds.length > 0) {
-            await StockLot.deleteMany({
-                _id: { $in: lotIds },
-                userId: new mongoose.Types.ObjectId(ownerId),
-            });
-        }
-
-        res.status(200).json({ success: true, message: "ยกเลิก PO สำเร็จ ✅", data: po });
-    } catch (error) {
-        console.error("❌ Cancel PO Error:", error);
-        res.status(500).json({ success: false, message: "Server error while cancelling PO" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "รหัสหมวดหมู่ไม่ถูกต้อง" });
+      return;
     }
+
+    const updates: PlainDoc = {};
+
+    if (typeof name === "string" && name.trim()) {
+      const normalizedName = name.trim();
+      const duplicate = await Category.findOne({
+        _id: { $ne: id },
+        adminId: ownerId,
+        name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+      }).lean();
+
+      if (duplicate) {
+        res.status(409).json({ success: false, message: "มีชื่อหมวดหมู่ซ้ำ" });
+        return;
+      }
+
+      updates.name = normalizedName;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "description")) {
+      updates.description = description;
+    }
+
+    const category = (await Category.findOneAndUpdate(
+      { _id: id, adminId: ownerId },
+      { $set: updates },
+      { new: true }
+    ).lean()) as PlainDoc | null;
+
+    if (!category) {
+      res.status(404).json({ success: false, message: "ไม่พบหมวดหมู่" });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "อัปเดตหมวดหมู่สำเร็จ",
+      data: {
+        _id: String(category._id),
+        name: category.name,
+        description: category.description ?? "",
+      },
+    });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while updating category");
+  }
+};
+
+export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerId } = await getAuthContext(req);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "รหัสหมวดหมู่ไม่ถูกต้อง" });
+      return;
+    }
+
+    const usage = await Product.countDocuments({ userId: ownerId, category: id });
+    if (usage > 0) {
+      res.status(409).json({ success: false, message: "ไม่สามารถลบหมวดหมู่ที่ยังมีสินค้าใช้งานอยู่" });
+      return;
+    }
+
+    const result = await Category.findOneAndDelete({ _id: id, adminId: ownerId }).lean();
+    if (!result) {
+      res.status(404).json({ success: false, message: "ไม่พบหมวดหมู่" });
+      return;
+    }
+
+    res.status(200).json({ success: true, message: "ลบหมวดหมู่สำเร็จ" });
+  } catch (error) {
+    handleControllerError(res, error, "Server error while deleting category");
+  }
 };
