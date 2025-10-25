@@ -674,6 +674,7 @@ export default function Dashboard() {
             valueFormatter={formatPaymentValue}
           />
         </section>
+        
       </div>
     </div>
     </div>
