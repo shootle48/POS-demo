@@ -699,7 +699,7 @@ export default function HomePage() {
     [purchaseOrders, currentRangeKey]
   );
 
-  const poPie = useMemo(() => {
+  const poPieEntries = useMemo(() => {
     const approvedTotalsByProduct: Record<string, { name: string; value: number }> = {};
     purchaseInRange.forEach((po: any) => {
       const approvedBatches = new Set(
@@ -720,14 +720,14 @@ export default function HomePage() {
         };
       });
     });
-    return Object.values(approvedTotalsByProduct)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
+    return Object.values(approvedTotalsByProduct).sort((a, b) => b.value - a.value);
   }, [purchaseInRange]);
 
+  const poPie = useMemo(() => poPieEntries.slice(0, 8), [poPieEntries]);
+
   const poExpenseInRange = useMemo(
-    () => poPie.reduce((sum, entry) => sum + entry.value, 0),
-    [poPie]
+    () => poPieEntries.reduce((sum, entry) => sum + entry.value, 0),
+    [poPieEntries]
   );
 
   const stockTimeline = useMemo(() => {

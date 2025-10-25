@@ -16,6 +16,7 @@ import DashboardKpiRow, { KpiCardItem } from "./dashboard/DashboardKpiRow";
 import DashboardPieChartCard from "./dashboard/DashboardPieChartCard";
 import DashboardLineChartCard from "./dashboard/DashboardLineChartCard";
 import DashboardTimeline from "./dashboard/DashboardTimeline";
+import { resolveApprovedPurchaseTotal } from "../../utils/purchaseOrders";
 
 type RangeKey = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -101,31 +102,6 @@ const formatCurrency = (value: number) =>
 const sanitizeNumber = (value: any) => {
   const numeric = Number(value ?? 0);
   return Number.isFinite(numeric) ? numeric : 0;
-};
-
-const resolveApprovedPurchaseTotal = (po: PurchaseOrderEntry) => {
-  const approvedBatches = new Set(
-    (po.stockLots || [])
-      .filter((lot: any) => (lot?.qcStatus || "").trim() === "ผ่าน")
-      .map((lot: any) => lot?.batchNumber)
-      .filter(Boolean)
-  );
-
-  if (approvedBatches.size === 0) {
-    return 0;
-  }
-
-  return (po.items || []).reduce((sum: number, item: any) => {
-    const batch = item?.batchNumber || "";
-    if (!approvedBatches.has(batch)) return sum;
-
-    const value =
-      typeof item?.total === "number"
-        ? item.total
-        : sanitizeNumber(item?.costPrice) * sanitizeNumber(item?.quantity);
-
-    return sum + sanitizeNumber(value);
-  }, 0);
 };
 
 const SALES_EMPTY_STATE = "ไม่พบข้อมูลยอดขายในช่วงที่เลือก";
@@ -399,16 +375,27 @@ export default function Dashboard() {
     });
   }, [purchaseOrders, previousRangeKey]);
 
-  const purchaseExpense = useMemo(
-    () =>
-      filteredPurchaseOrders.reduce(
-        (sum, po) => sum + resolveApprovedPurchaseTotal(po),
-        0
-      ),
-    [filteredPurchaseOrders]
+  const poPieEntries = useMemo(() => {
+    const supplierMap = new Map<string, number>();
+    filteredPurchaseOrders.forEach((po) => {
+      const value = resolveApprovedPurchaseTotal(po);
+      if (value <= 0) return;
+      const supplier = po.supplierName || "ไม่ระบุ";
+      supplierMap.set(supplier, (supplierMap.get(supplier) || 0) + value);
+    });
+    return Array.from(supplierMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredPurchaseOrders]);
+
+  const poPie = useMemo(() => poPieEntries.slice(0, 8), [poPieEntries]);
+
+  const poExpenseInRange = useMemo(
+    () => poPieEntries.reduce((sum, entry) => sum + entry.value, 0),
+    [poPieEntries]
   );
 
-  const previousPurchaseExpense = useMemo(
+  const previousPoExpenseInRange = useMemo(
     () =>
       previousPurchaseOrders.reduce(
         (sum, po) => sum + resolveApprovedPurchaseTotal(po),
@@ -417,25 +404,12 @@ export default function Dashboard() {
     [previousPurchaseOrders]
   );
 
-  const purchaseExpenseChange = useMemo(() => {
-    if (previousPurchaseExpense === 0) return null;
+  const poExpenseChange = useMemo(() => {
+    if (previousPoExpenseInRange === 0) return null;
     return (
-      ((purchaseExpense - previousPurchaseExpense) / previousPurchaseExpense) * 100
+      ((poExpenseInRange - previousPoExpenseInRange) / previousPoExpenseInRange) * 100
     );
-  }, [purchaseExpense, previousPurchaseExpense]);
-
-  const purchasePieData = useMemo(() => {
-    const supplierMap = new Map<string, number>();
-    filteredPurchaseOrders.forEach((po) => {
-      const value = resolveApprovedPurchaseTotal(po);
-      if (value <= 0) return;
-      supplierMap.set(po.supplierName, (supplierMap.get(po.supplierName) || 0) + value);
-    });
-    return Array.from(supplierMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-  }, [filteredPurchaseOrders]);
+  }, [poExpenseInRange, previousPoExpenseInRange]);
 
   const timelineItems = useMemo(() => {
     return [...stockTransactions]
@@ -506,8 +480,8 @@ export default function Dashboard() {
     {
       id: "po-expense",
       title: "ค่าใช้จ่ายใบสั่งซื้อ",
-      value: formatCurrency(purchaseExpense),
-      change: purchaseExpenseChange,
+      value: formatCurrency(poExpenseInRange),
+      change: poExpenseChange,
       changeText: "เทียบช่วงก่อนหน้า",
       footnote: "รวมใบสั่งซื้อในช่วงที่เลือก",
     },
@@ -607,7 +581,7 @@ export default function Dashboard() {
           <h2>สัดส่วนค่าใช้จ่ายใบสั่งซื้อ</h2>
           <span className="card-subtitle">แยกตามซัพพลายเออร์</span>
           <DashboardPieChartCard
-            data={purchasePieData}
+            data={poPie}
             loading={loading}
             emptyMessage="ยังไม่มีค่าใช้จ่ายใบสั่งซื้อในช่วงนี้"
             colors={COLORS}
