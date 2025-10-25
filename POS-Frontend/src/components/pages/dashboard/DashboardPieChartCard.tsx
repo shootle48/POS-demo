@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  PieLabelRenderProps,
-} from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface PieItem {
   name: string;
@@ -20,39 +13,6 @@ interface DashboardPieChartCardProps {
   valueFormatter?: (value: number) => string;
   colors: string[];
 }
-
-const RADIAN = Math.PI / 180;
-
-const renderPercentLabel = ({
-  cx = 0,
-  cy = 0,
-  midAngle = 0,
-  innerRadius = 0,
-  outerRadius = 0,
-  percent = 0,
-}: PieLabelRenderProps) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const angle = -midAngle * RADIAN;
-  const x = cx + radius * Math.cos(angle);
-  const y = cy + radius * Math.sin(angle);
-  const anchor = x > cx ? "start" : "end";
-  const safePercent = Number.isFinite(percent) ? percent : 0;
-  const percentageLabel = `${Math.max(0, Math.round(safePercent * 100))}%`;
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#ffffff"
-      fontSize={12}
-      fontWeight={600}
-      textAnchor={anchor}
-      dominantBaseline="central"
-    >
-      {percentageLabel}
-    </text>
-  );
-};
 
 const DashboardPieChartCard: React.FC<DashboardPieChartCardProps> = ({
   data,
@@ -85,7 +45,6 @@ const DashboardPieChartCard: React.FC<DashboardPieChartCardProps> = ({
               paddingAngle={3}
               cornerRadius={12}
               labelLine={false}
-              label={renderPercentLabel}
             >
               {chartData.map((entry, index) => (
                 <Cell

@@ -14,7 +14,6 @@ import {
   Legend,
   Area,
   Label,
-  PieLabelRenderProps,
 } from "recharts";
 
 import "../../styles/page/HomePage.css";
@@ -182,37 +181,6 @@ const describePaymentType = (type: string, amount: number) => {
     return "🟢 ขาย";
   }
   return `⚪ ${type}`;
-};
-
-const RADIAN = Math.PI / 180;
-const renderPiePercentageLabel = ({
-  cx = 0,
-  cy = 0,
-  midAngle = 0,
-  innerRadius = 0,
-  outerRadius = 0,
-  percent = 0,
-}: PieLabelRenderProps) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const angle = -midAngle * RADIAN;
-  const x = cx + radius * Math.cos(angle);
-  const y = cy + radius * Math.sin(angle);
-  const anchor = x > cx ? "start" : "end";
-  const safePercent = Number.isFinite(percent) ? percent : 0;
-  const percentageLabel = `${Math.max(0, Math.round((safePercent || 0) * 100))}%`;
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#ffffff"
-      fontSize={12}
-      fontWeight={600}
-      textAnchor={anchor}
-      dominantBaseline="central"
-    >
-      {percentageLabel}
-    </text>
-  );
 };
 
 const STOCK_TYPE_META: Record<
@@ -888,7 +856,6 @@ export default function HomePage() {
                     outerRadius={90}
                     paddingAngle={2}
                     labelLine={false}
-                    label={renderPiePercentageLabel}
                   >
                     {paymentPie.map((_, idx) => (
                       <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -919,7 +886,6 @@ export default function HomePage() {
                     innerRadius={45}
                     outerRadius={85}
                     labelLine={false}
-                    label={renderPiePercentageLabel}
                     paddingAngle={3}
                   >
                     {poPie.map((_, idx) => (

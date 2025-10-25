@@ -365,8 +365,23 @@
 }
 
 .table-scroll.tall{
-  max-height:280px;
+  max-height:260px;
   overflow-y:auto;
+  padding-right:8px;
+}
+
+.table-scroll.tall::-webkit-scrollbar{
+  width:6px;
+}
+
+.table-scroll.tall::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, rgba(99,102,241,0.6), rgba(59,130,246,0.6));
+  border-radius:999px;
+}
+
+.table-scroll.tall::-webkit-scrollbar-track{
+  background:rgba(226,232,240,0.4);
+  border-radius:999px;
 }
 
 .timeline::-webkit-scrollbar{ width:6px; }
