@@ -6,13 +6,14 @@ import {
     getReceiptSummary,
     getReceiptBySaleId,
 } from "../controllers/receiptController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
-router.get("/sales-summary", getReceiptSummary);          // 🔹 ดึงใบเสร็จทั้งหมด
-router.get("/getReceipt", getAllReceipts);          // 🔹 ดึงใบเสร็จทั้งหมด
-router.get("/paymentId/:paymentId", getReceiptByPaymentId); // 🔹 ดึงใบเสร็จจาก saleId
-router.delete("/:paymentId", deleteReceipt);   // 🔹 ลบใบเสร็จตาม saleId
-router.get("/receipt/:saleId", getReceiptBySaleId);
+router.get("/sales-summary", authMiddleware, getReceiptSummary);          // 🔹 ดึงใบเสร็จทั้งหมด
+router.get("/getReceipt", authMiddleware, getAllReceipts);          // 🔹 ดึงใบเสร็จทั้งหมด
+router.get("/paymentId/:paymentId", authMiddleware, getReceiptByPaymentId); // 🔹 ดึงใบเสร็จจาก saleId
+router.delete("/:paymentId", authMiddleware, deleteReceipt);   // 🔹 ลบใบเสร็จตาม saleId
+router.get("/receipt/:saleId", authMiddleware, getReceiptBySaleId);
 
 export default router;

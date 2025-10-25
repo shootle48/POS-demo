@@ -1,30 +1,21 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import mongoose from "mongoose";
 import Receipt from "../models/Receipt";
 import Stock from "../models/Stock";
 import StockTransaction from "../models/StockTransaction";
 import Payment from "../models/Payment";
-import { verifyToken } from "../utils/auth";
+import { AuthRequest } from "../middlewares/authMiddleware";
+import { resolveOwnerContext } from "../utils/tenant";
 
 /* ============================================================
    🧾 สร้างการชำระเงิน (ทั้งขายและคืนสินค้า)
 ============================================================ */
-export const createPayment = async (req: Request, res: Response): Promise<void> => {
+export const createPayment = async (req: AuthRequest, res: Response): Promise<void> => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const token = req.header("Authorization")?.split(" ")[1];
-        if (!token) {
-            res.status(401).json({ success: false, message: "Unauthorized" });
-            return;
-        }
-
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" });
-            return;
-        }
+        const { ownerObjectId, storeName } = await resolveOwnerContext(req);
 
         // ✅ รับค่าจาก body
         const {
@@ -44,7 +35,7 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         // 💰 ดึงข้อมูลสินค้าและคำนวณกำไร
         const calculatedItems = await Promise.all(
             items.map(async (item: any) => {
-                const stock = await Stock.findOne({ barcode: item.barcode });
+                const stock = await Stock.findOne({ barcode: item.barcode, userId: ownerObjectId });
                 const costPrice = stock?.costPrice || 0;
                 const profit = (item.price - costPrice) * item.quantity;
                 return { ...item, profit };
@@ -68,6 +59,8 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         const [newPayment] = await Payment.create(
             [
                 {
+                    userId: ownerObjectId,
+                    storeName,
                     saleId,
                     employeeName,
                     paymentMethod,
@@ -86,6 +79,8 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         const [newReceipt] = await Receipt.create(
             [
                 {
+                    userId: ownerObjectId,
+                    storeName,
                     paymentId: newPayment._id,
                     employeeName,
                     items: calculatedItems,
@@ -121,6 +116,13 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         await session.abortTransaction();
         session.endSession();
         console.error("❌ Error in createPayment:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึก", error });
     }
 };
@@ -128,9 +130,12 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
 /* ============================================================
    💳 ดึงข้อมูลการชำระเงินทั้งหมด
 ============================================================ */
-export const getAllPayments = async (_: Request, res: Response): Promise<void> => {
+export const getAllPayments = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const payments = await Payment.find().populate("receiptId").sort({ createdAt: -1 });
+        const { ownerObjectId } = await resolveOwnerContext(req);
+        const payments = await Payment.find({ userId: ownerObjectId })
+            .populate("receiptId")
+            .sort({ createdAt: -1 });
         if (!payments.length) {
             res.status(404).json({ success: false, message: "ไม่พบข้อมูลการชำระเงิน" });
             return;
@@ -138,6 +143,13 @@ export const getAllPayments = async (_: Request, res: Response): Promise<void> =
         res.status(200).json({ success: true, data: payments });
     } catch (error) {
         console.error("Error retrieving all payments:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการดึงข้อมูลการชำระเงิน", error });
     }
 };
@@ -145,22 +157,12 @@ export const getAllPayments = async (_: Request, res: Response): Promise<void> =
 /* ============================================================
    🔁 คืนสินค้า (ทั้งใบหรือบางรายการ)
 ============================================================ */
-export const processRefund = async (req: Request, res: Response): Promise<void> => {
+export const processRefund = async (req: AuthRequest, res: Response): Promise<void> => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const token = req.header("Authorization")?.split(" ")[1];
-        if (!token) {
-            res.status(401).json({ success: false, message: "Unauthorized" });
-            return;
-        }
-
-        const decoded = verifyToken(token);
-        if (typeof decoded === "string" || !("userId" in decoded)) {
-            res.status(401).json({ success: false, message: "Invalid token" });
-            return;
-        }
+        const { ownerObjectId, storeName } = await resolveOwnerContext(req);
 
         // ✅ รองรับรับ items จาก body (คืนบางรายการ)
         const { saleId, reason, paymentMethod, items } = req.body;
@@ -175,12 +177,23 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
 
         // ✅ ดึงใบเสร็จต้นฉบับ
         const isObjectId = mongoose.Types.ObjectId.isValid(saleId);
-        const receipt = isObjectId
-            ? await Receipt.findById(saleId).session(session)
-            : await Receipt.findOne({ saleId }).session(session);
+        let receipt = null;
+        let payment = null;
 
-        if (!receipt) {
-            res.status(404).json({ success: false, message: "ไม่พบใบเสร็จนี้" });
+        if (isObjectId) {
+            receipt = await Receipt.findOne({ _id: saleId, userId: ownerObjectId }).session(session);
+            if (receipt?.paymentId) {
+                payment = await Payment.findOne({ _id: receipt.paymentId, userId: ownerObjectId }).session(session);
+            }
+        } else {
+            payment = await Payment.findOne({ saleId, userId: ownerObjectId }).session(session);
+            if (payment) {
+                receipt = await Receipt.findOne({ paymentId: payment._id, userId: ownerObjectId }).session(session);
+            }
+        }
+
+        if (!receipt || !payment) {
+            res.status(404).json({ success: false, message: "ไม่พบข้อมูลการขายนี้" });
             return;
         }
 
@@ -193,13 +206,6 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-
-        const payment = await Payment.findById(receipt.paymentId).session(session);
-        if (!payment) {
-            res.status(404).json({ success: false, message: "ไม่พบข้อมูลการชำระเงินต้นทาง" });
-            return;
-        }
-
         // ✅ ใช้เฉพาะสินค้าที่เลือกมาคืน
         const refundItems = items && items.length > 0 ? items : receipt.items;
 
@@ -209,7 +215,7 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
 
         // 📦 คืนสินค้าเข้าสต็อกเฉพาะรายการที่เลือก
         for (const item of refundItems) {
-            const stock = await Stock.findOne({ barcode: item.barcode }).session(session);
+            const stock = await Stock.findOne({ barcode: item.barcode, userId: ownerObjectId }).session(session);
             if (stock) {
                 stock.totalQuantity += item.quantity;
                 await stock.save({ session });
@@ -220,7 +226,7 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
                         {
                             stockId: stock._id,
                             productId: stock.productId,
-                            userId: decoded.userId,
+                            userId: ownerObjectId,
                             type: "RETURN",
                             quantity: item.quantity,
                             costPrice: stock.costPrice,
@@ -239,6 +245,8 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
         const [refundPayment] = await Payment.create(
             [
                 {
+                    userId: ownerObjectId,
+                    storeName,
                     saleId: payment.saleId,
                     employeeName: receipt.employeeName,
                     paymentMethod,
@@ -257,6 +265,8 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
         const [returnReceipt] = await Receipt.create(
             [
                 {
+                    userId: ownerObjectId,
+                    storeName,
                     paymentId: refundPayment._id,
                     originalReceiptId: receipt._id,
                     employeeName: receipt.employeeName,
@@ -284,7 +294,7 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
 
         // 🔗 เชื่อมใบเสร็จต้นฉบับ (บันทึก reference แต่ไม่บังคับว่าคืนครบทั้งใบ)
         await Receipt.updateOne(
-            { _id: receipt._id },
+            { _id: receipt._id, userId: ownerObjectId },
             { $set: { returnReceiptId: returnReceipt._id } },
             { session }
         );
@@ -305,6 +315,13 @@ export const processRefund = async (req: Request, res: Response): Promise<void> 
         await session.abortTransaction();
         session.endSession();
         console.error("❌ processRefund Error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({ success: false, message: "Server error", error });
     }
 };

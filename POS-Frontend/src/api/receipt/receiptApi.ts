@@ -5,7 +5,13 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 // ดึงรายการใบเสร็จทั้งหมด
 export const fetchReceipts = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/receipts/getReceipt`);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return [];
+    }
+    const response = await axios.get(`${API_BASE_URL}/receipts/getReceipt`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data.success ? response.data.receipts : [];
   } catch (error) {
     console.error("Error fetching receipts:", error);
@@ -42,8 +48,13 @@ export const fetchSalesSummary = async (
   filter: "daily" | "weekly" | "monthly" | "yearly"
 ) => {
   try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return { success: false, data: null };
+    }
     const response = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
       params: { date: date.toISOString(), filter },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   } catch (error) {

@@ -25,6 +25,8 @@ export interface IReceipt extends Document {
     returnReason?: string;
     profit?: number;
     timestamp: Date;
+    userId: mongoose.Types.ObjectId;
+    storeName?: string;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -47,6 +49,8 @@ const ReceiptSchema = new Schema<IReceipt>(
         paymentId: { type: Schema.Types.ObjectId, ref: "Payment", default: null },
         originalReceiptId: { type: Schema.Types.ObjectId, ref: "Receipt", default: null },
         returnReceiptId: { type: Schema.Types.ObjectId, ref: "Receipt", default: null },
+        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        storeName: { type: String },
 
         employeeName: { type: String, required: true },
 
@@ -85,6 +89,7 @@ ReceiptSchema.index({ isReturn: 1 });
 ReceiptSchema.index({ originalReceiptId: 1 });
 ReceiptSchema.index({ returnReceiptId: 1 });
 ReceiptSchema.index({ discount: 1 }); // ✅ เพื่อรายงานยอดส่วนลด
+ReceiptSchema.index({ userId: 1 });
 
 const Receipt = mongoose.model<IReceipt>("Receipt", ReceiptSchema);
 export default Receipt;

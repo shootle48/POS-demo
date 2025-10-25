@@ -1,12 +1,15 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import Receipt, { IReceipt } from "../models/Receipt";
 import Payment from "../models/Payment";
 import mongoose from "mongoose";
+import { AuthRequest } from "../middlewares/authMiddleware";
+import { resolveOwnerContext } from "../utils/tenant";
 
 // 📌 ดึงใบเสร็จทั้งหมด + populate ข้อมูลการชำระเงิน
-export const getAllReceipts = async (req: Request, res: Response): Promise<void> => {
+export const getAllReceipts = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const receipts = await Receipt.find()
+        const { ownerObjectId } = await resolveOwnerContext(req);
+        const receipts = await Receipt.find({ userId: ownerObjectId })
             .populate({
                 path: "paymentId",
                 model: "Payment",
@@ -16,6 +19,13 @@ export const getAllReceipts = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ success: true, receipts });
     } catch (error) {
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "เกิดข้อผิดพลาดในการดึงข้อมูลใบเสร็จทั้งหมด",
@@ -25,8 +35,9 @@ export const getAllReceipts = async (req: Request, res: Response): Promise<void>
 };
 
 // 📌 ดึงใบเสร็จตาม paymentId + populate
-export const getReceiptByPaymentId = async (req: Request, res: Response): Promise<void> => {
+export const getReceiptByPaymentId = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+        const { ownerObjectId } = await resolveOwnerContext(req);
         const { paymentId } = req.params;
 
         // ✅ ตรวจว่าเป็น ObjectId ที่ถูกต้องไหม
@@ -36,7 +47,7 @@ export const getReceiptByPaymentId = async (req: Request, res: Response): Promis
 
         if (isObjectId) {
             // 🔍 ถ้าเป็น ObjectId → หาโดยตรงจาก Receipt
-            receipt = await Receipt.findOne({ paymentId })
+            receipt = await Receipt.findOne({ paymentId, userId: ownerObjectId })
                 .populate({
                     path: "paymentId",
                     model: "Payment",
@@ -44,13 +55,13 @@ export const getReceiptByPaymentId = async (req: Request, res: Response): Promis
                 });
         } else {
             // 🔍 ถ้าไม่ใช่ ObjectId → ไปหา Payment ที่มี saleId นี้ก่อน
-            const payment = await Payment.findOne({ saleId: paymentId });
+            const payment = await Payment.findOne({ saleId: paymentId, userId: ownerObjectId });
             if (!payment) {
                 res.status(404).json({ success: false, message: "ไม่พบข้อมูลการชำระเงินนี้" });
                 return;
             }
 
-            receipt = await Receipt.findOne({ paymentId: payment._id })
+            receipt = await Receipt.findOne({ paymentId: payment._id, userId: ownerObjectId })
                 .populate({
                     path: "paymentId",
                     model: "Payment",
@@ -66,6 +77,13 @@ export const getReceiptByPaymentId = async (req: Request, res: Response): Promis
         res.status(200).json({ success: true, receipt });
     } catch (error) {
         console.error("❌ getReceiptByPaymentId error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "เกิดข้อผิดพลาดในการดึงใบเสร็จ",
@@ -75,8 +93,9 @@ export const getReceiptByPaymentId = async (req: Request, res: Response): Promis
 };
 
 // 📊 สรุปยอด (คงเดิม)
-export const getReceiptSummary = async (req: Request, res: Response): Promise<void> => {
+export const getReceiptSummary = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+        const { ownerObjectId } = await resolveOwnerContext(req);
         const now = new Date();
 
         // ช่วงเวลา
@@ -90,9 +109,9 @@ export const getReceiptSummary = async (req: Request, res: Response): Promise<vo
         const queryFields = "employeeName items totalPrice amountPaid changeAmount timestamp";
 
         // Query receipts
-        const todayReceipts = await Receipt.find({ timestamp: { $gte: startOfToday } }).select(queryFields);
-        const weekReceipts = await Receipt.find({ timestamp: { $gte: startOfWeek } }).select(queryFields);
-        const monthReceipts = await Receipt.find({ timestamp: { $gte: startOfMonth } }).select(queryFields);
+        const todayReceipts = await Receipt.find({ timestamp: { $gte: startOfToday }, userId: ownerObjectId }).select(queryFields);
+        const weekReceipts = await Receipt.find({ timestamp: { $gte: startOfWeek }, userId: ownerObjectId }).select(queryFields);
+        const monthReceipts = await Receipt.find({ timestamp: { $gte: startOfMonth }, userId: ownerObjectId }).select(queryFields);
 
         // รวมยอด
         const calcSummary = (receipts: IReceipt[]) => ({
@@ -118,6 +137,13 @@ export const getReceiptSummary = async (req: Request, res: Response): Promise<vo
             thisMonth: calcSummary(monthReceipts),
         });
     } catch (error) {
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "เกิดข้อผิดพลาดในการดึงข้อมูล summary",
@@ -126,8 +152,9 @@ export const getReceiptSummary = async (req: Request, res: Response): Promise<vo
     }
 };
 
-export const getReceiptBySaleId = async (req: Request, res: Response) => {
+export const getReceiptBySaleId = async (req: AuthRequest, res: Response) => {
     try {
+        const { ownerObjectId } = await resolveOwnerContext(req);
         const { saleId } = req.params;
 
         // ✅ ตรวจว่าเป็น ObjectId ไหม
@@ -138,19 +165,21 @@ export const getReceiptBySaleId = async (req: Request, res: Response) => {
         // 🧾 1. ถ้าเป็น ObjectId → หาโดย _id หรือ paymentId
         if (isObjectId) {
             receipt = await Receipt.findOne({
+                userId: ownerObjectId,
                 $or: [{ _id: saleId }, { paymentId: saleId }],
                 isReturn: false,
             }).populate("paymentId");
         }
         // 🧾 2. ถ้าเป็นเลข saleId แบบ string → หาโดย saleId จาก Payment
         else {
-            const payment = await Payment.findOne({ saleId });
+            const payment = await Payment.findOne({ saleId, userId: ownerObjectId });
             if (!payment) {
                 res.status(404).json({ success: false, message: "ไม่พบข้อมูลการขายนี้" });
                 return;
             }
 
             receipt = await Receipt.findOne({
+                userId: ownerObjectId,
                 paymentId: payment._id,
                 isReturn: false,
             }).populate("paymentId");
@@ -164,15 +193,23 @@ export const getReceiptBySaleId = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, receipt });
     } catch (error) {
         console.error("❌ getReceiptBySaleId error:", error);
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
 // 📌 ลบใบเสร็จตาม paymentId
-export const deleteReceipt = async (req: Request, res: Response): Promise<void> => {
+export const deleteReceipt = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+        const { ownerObjectId } = await resolveOwnerContext(req);
         const { paymentId } = req.params;
-        const deletedReceipt = await Receipt.findOneAndDelete({ paymentId });
+        const deletedReceipt = await Receipt.findOneAndDelete({ paymentId, userId: ownerObjectId });
 
         if (!deletedReceipt) {
             res.status(404).json({ success: false, message: "ไม่พบใบเสร็จ" });
@@ -181,6 +218,13 @@ export const deleteReceipt = async (req: Request, res: Response): Promise<void> 
 
         res.status(200).json({ success: true, message: "ลบใบเสร็จสำเร็จ" });
     } catch (error) {
+        if (
+            error instanceof Error &&
+            (error.message.includes("Owner") || error.message.includes("Invalid owner"))
+        ) {
+            res.status(401).json({ success: false, message: "Unauthorized" });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: "เกิดข้อผิดพลาดในการลบใบเสร็จ",

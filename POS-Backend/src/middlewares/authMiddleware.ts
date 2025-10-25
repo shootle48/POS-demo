@@ -6,6 +6,8 @@ import { verifyToken } from "../utils/auth";
 export interface AuthRequest extends Request {
     userId?: string;
     role?: string;
+    adminId?: string;
+    nameStore?: string;
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -22,6 +24,12 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
         req.userId = decoded.userId;
         req.role = decoded.role;
+        if ("adminId" in decoded && typeof decoded.adminId === "string") {
+            req.adminId = decoded.adminId;
+        }
+        if ("nameStore" in decoded && typeof decoded.nameStore === "string") {
+            req.nameStore = decoded.nameStore;
+        }
 
         next();
     } catch {
